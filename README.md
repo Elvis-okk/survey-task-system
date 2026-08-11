@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 # 查勘任务发布处理系统
 
 查勘任务发布处理系统，支持任务发布、查勘、处理、归档全流程管理。
@@ -11,6 +10,7 @@
 - 响应式设计，支持手机和电脑
 - 标签管理、村/社区管理
 - 用户管理（管理员）
+- Android WebView 客户端
 
 ## 技术栈
 
@@ -18,26 +18,57 @@
 - **前端**: 原生 JavaScript + Tailwind CSS
 - **认证**: JWT
 - **部署**: Docker
+- **Android**: WebView 空壳应用
 
 ## 快速开始
 
 ### 本地开发
 
 ```bash
-cd server
-npm install
-npm start
+cd server && npm install && npm start
 ```
 
-访问 http://localhost:3000
-
 ### Docker 部署
+
+使用 GitHub Container Registry 镜像一键部署：
 
 ```bash
 docker-compose up -d
 ```
 
-访问 http://localhost:3000
+或直接使用 Docker 命令：
+
+```bash
+docker run -d --name survey-task-system -p 3000:3000 -v ./data:/app/data ghcr.io/elvis-okk/survey-task-system:1.0
+```
+
+### 从源码构建
+
+```bash
+git clone https://github.com/Elvis-okk/survey-task-system.git
+cd survey-task-system
+docker-compose up -d --build
+```
+
+## Android 客户端
+
+项目包含 Android WebView 空壳应用，位于 android/ 目录。
+
+### 功能
+
+- JWT 登录认证
+- WebView 全屏加载系统网页
+- 支持文件上传/下载
+- 下拉刷新
+- 退出确认
+
+### 构建
+
+1. 使用 Android Studio 打开 android/ 目录
+2. 修改 LoginActivity.java 中的服务器地址
+3. 构建 APK
+
+> APK 也可从 [GitHub Releases](https://github.com/Elvis-okk/survey-task-system/releases) 下载。
 
 ## 默认账号
 
@@ -45,39 +76,29 @@ docker-compose up -d
 |--------|------|------|
 | admin | admin123 | 管理员 |
 
+## 项目结构
+
+```
+survey-task-system/
+  server/           # 后端服务
+    routes/         # API 路由
+  public/           # 前端静态文件
+  android/          # Android WebView 空壳应用
+  Dockerfile
+  docker-compose.yml
+  .github/workflows/  # CI/CD 工作流
+```
+
 ## 环境变量
 
 | 变量 | 默认值 | 说明 |
 |------|--------|------|
 | PORT | 3000 | 服务端口 |
-| JWT_SECRET | - | JWT签名密钥 |
-| DB_PATH | ./data/survey.db | 数据库路径 |
+| JWT_SECRET | change-this-secret-in-production | JWT 密钥 |
+| ADMIN_PASSWORD | admin123 | 管理员密码 |
+| DB_PATH | /app/data/survey.db | 数据库路径 |
+| AUTO_SAVE_INTERVAL | 5 | 自动保存间隔(分钟) |
 
-## 项目结构
+## License
 
-```
-survey-task-system/
-├── server/              # 后端代码
-│   ├── index.js         # 主入口
-│   ├── database.js      # 数据库初始化
-│   ├── middleware.js     # 认证中间件
-│   ├── package.json     # 依赖配置
-│   └── routes/          # API路由
-│       ├── auth.js      # 认证
-│       ├── users.js     # 用户管理
-│       ├── tasks.js     # 任务管理
-│       └── settings.js  # 系统设置
-├── public/              # 前端静态文件
-│   ├── login.html       # 登录页
-│   ├── index.html       # 主页面
-│   ├── css/app.css      # 样式
-│   └── js/
-│       ├── api.js       # API封装
-│       ├── socket.js    # Socket.io
-│       └── app.js       # 主应用逻辑
-├── Dockerfile
-├── docker-compose.yml
-└── .dockerignore
-=======
-# survey-task-system
->>>>>>> deffee15041bd156c2827f14121ebd429eef2515
+MIT
