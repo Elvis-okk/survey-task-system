@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # 查勘任务发布处理系统
 
 查勘任务发布处理系统，支持任务发布、查勘、处理、归档全流程管理。
@@ -77,3 +78,6 @@ survey-task-system/
 ├── Dockerfile
 ├── docker-compose.yml
 └── .dockerignore
+=======
+# survey-task-system
+>>>>>>> deffee15041bd156c2827f14121ebd429eef2515
