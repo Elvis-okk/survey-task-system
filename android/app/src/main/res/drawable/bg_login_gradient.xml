@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 登录页面渐变背景 - 蓝色主题 -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android">
+    <gradient
+        android:startColor="#4A90D9"
+        android:centerColor="#5BA0E2"
+        android:endColor="#6BA8E8"
+        android:angle="135"
+        android:type="linear" />
+</shape>

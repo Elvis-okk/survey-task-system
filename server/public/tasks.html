@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>任务列表 - 查勘任务管理系统</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div id="topNav"></div>
+
+  <div class="page-container">
+    <div class="page-header">
+      <h2>任务列表</h2>
+      <a href="publish.html" class="btn btn-primary btn-sm" id="publishBtn">+ 发布任务</a>
+    </div>
+
+    <!-- 筛选栏 -->
+    <div class="card filter-card">
+      <div class="filter-bar">
+        <div class="filter-item">
+          <input type="text" id="searchInput" class="form-control" placeholder="搜索任务标题...">
+        </div>
+        <div class="filter-item">
+          <select id="filterSurvey" class="form-control">
+            <option value="">全部查勘状态</option>
+            <option value="not_surveyed">待查勘</option>
+            <option value="surveyed">已查勘</option>
+          </select>
+        </div>
+        <div class="filter-item">
+          <select id="filterProcess" class="form-control">
+            <option value="">全部处理状态</option>
+            <option value="pending">待处理</option>
+            <option value="resurvey">需复查</option>
+            <option value="missing_docs">缺资料</option>
+            <option value="submitted">已提交</option>
+          </select>
+        </div>
+        <div class="filter-item">
+          <select id="filterVillage" class="form-control">
+            <option value="">全部村庄</option>
+          </select>
+        </div>
+        <div class="filter-item">
+          <select id="filterTag" class="form-control">
+            <option value="">全部标签</option>
+          </select>
+        </div>
+        <div class="filter-item">
+          <button class="btn btn-secondary btn-sm" onclick="resetFilters()">重置</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 任务列表 -->
+    <div id="taskList" class="task-list">
+      <div class="loading-spinner"></div>
+    </div>
+
+    <!-- 分页 -->
+    <div id="pagination" class="pagination"></div>
+  </div>
+
+  <div id="bottomNav"></div>
+
+  <script src="js/app.js"></script>
+  <script>
+    const currentUser = App.initPage();
+    const role = currentUser.role;
+
+    // 权限控制
+    if (role === 'surveyor') {
+      document.getElementById('publishBtn').style.display = 'none';
+    }
+
+    // 状态
+    let currentPage = 1;
+    const pageSize = 10;
+    let totalPages = 1;
+    let searchTimer = null;
+
+    // 从URL参数初始化筛选
+    function initFiltersFromUrl() {
+      const params = new URLSearchParams(location.search);
+      if (params.get('survey_status')) {
+        document.getElementById('filterSurvey').value = params.get('survey_status');
+      }
+      if (params.get('process_status')) {
+        document.getElementById('filterProcess').value = params.get('process_status');
+      }
+    }
+
+    // 加载筛选选项
+    async function loadFilterOptions() {
+      try {
+        const [tags, villages] = await Promise.all([
+          App.loadTags(),
+          App.loadVillages()
+        ]);
+
+        const tagSelect = document.getElementById('filterTag');
+        tags.forEach(t => {
+          const opt = document.createElement('option');
+          opt.value = t.name;
+          opt.textContent = t.name;
+          tagSelect.appendChild(opt);
+        });
+
+        const villageSelect = document.getElementById('filterVillage');
+        villages.forEach(v => {
+          const opt = document.createElement('option');
+          opt.value = v.id;
+          opt.textContent = v.name;
+          villageSelect.appendChild(opt);
+        });
+      } catch (e) {
+        console.error('加载筛选选项失败:', e);
+      }
+    }
+
+    // 获取筛选参数
+    function getFilterParams() {
+      const params = {
+        page: currentPage,
+        pageSize
+      };
+
+      const search = document.getElementById('searchInput').value.trim();
+      if (search) params.keyword = search;
+
+      const surveyStatus = document.getElementById('filterSurvey').value;
+      if (surveyStatus) params.survey_status = surveyStatus;
+
+      const processStatus = document.getElementById('filterProcess').value;
+      if (processStatus) params.process_status = processStatus;
+
+      const villageId = document.getElementById('filterVillage').value;
+      if (villageId) params.village_id = parseInt(villageId);
+
+      const tag = document.getElementById('filterTag').value;
+      if (tag) params.tag = tag;
+
+      // 角色过滤
+      if (role === 'surveyor') {
+        params.assigned_to = currentUser.id;
+      } else if (role === 'publisher') {
+        params.created_by = currentUser.id;
+      }
+
+      return params;
+    }
+
+    // 加载任务列表
+    async function loadTasks() {
+      const container = document.getElementById('taskList');
+      container.innerHTML = '<div class="loading-spinner"></div>';
+
+      try {
+        const params = getFilterParams();
+        const result = await App.tasks.list(params);
+        const tasks = result.tasks || [];
+        const total = result.total || 0;
+        totalPages = Math.ceil(total / pageSize) || 1;
+
+        if (tasks.length === 0) {
+          container.innerHTML = `
+            <div class="empty-state">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="48" height="48">
+                <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+              </svg>
+              <p>暂无任务数据</p>
+            </div>`;
+          document.getElementById('pagination').innerHTML = '';
+          return;
+        }
+
+        container.innerHTML = tasks.map(task => `
+          <div class="task-card" onclick="location.href='task-detail.html?id=${task.id}'">
+            <div class="task-card-header">
+              <span class="task-card-title">${escapeHtml(task.title)}</span>
+              ${App.surveyStatusBadge(task.survey_status)}
+            </div>
+            <div class="task-card-body">
+              <div class="task-card-info">
+                <span>📍 ${escapeHtml(task.village_name || task.address || '未指定')}</span>
+                <span>📅 ${App.formatDateShort(task.publish_time || task.created_at)}</span>
+                ${task.assigned_to ? `<span>👤 ${App.getUserName(task.assigned_to)}</span>` : ''}
+              </div>
+                            ${App.taskTagBadge(task)}
+            </div>
+            <div class="task-card-footer">
+              ${App.processStatusBadge(task.process_status)}
+            </div>
+          </div>
+        `).join('');
+
+        renderPagination(total);
+      } catch (e) {
+        console.error('加载任务失败:', e);
+        container.innerHTML = '<div class="empty-state"><p>加载失败，请刷新重试</p></div>';
+      }
+    }
+
+    // 渲染分页
+    function renderPagination(total) {
+      const container = document.getElementById('pagination');
+      if (totalPages <= 1) { container.innerHTML = ''; return; }
+
+      let html = '';
+      html += `<button class="page-btn" ${currentPage <= 1 ? 'disabled' : ''} onclick="goPage(${currentPage - 1})">上一页</button>`;
+
+      const start = Math.max(1, currentPage - 2);
+      const end = Math.min(totalPages, currentPage + 2);
+
+      if (start > 1) {
+        html += `<button class="page-btn" onclick="goPage(1)">1</button>`;
+        if (start > 2) html += '<span class="page-ellipsis">...</span>';
+      }
+
+      for (let i = start; i <= end; i++) {
+        html += `<button class="page-btn ${i === currentPage ? 'active' : ''}" onclick="goPage(${i})">${i}</button>`;
+      }
+
+      if (end < totalPages) {
+        if (end < totalPages - 1) html += '<span class="page-ellipsis">...</span>';
+        html += `<button class="page-btn" onclick="goPage(${totalPages})">${totalPages}</button>`;
+      }
+
+      html += `<button class="page-btn" ${currentPage >= totalPages ? 'disabled' : ''} onclick="goPage(${currentPage + 1})">下一页</button>`;
+      container.innerHTML = html;
+    }
+
+    function goPage(page) {
+      if (page < 1 || page > totalPages) return;
+      currentPage = page;
+      loadTasks();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function resetFilters() {
+      document.getElementById('searchInput').value = '';
+      document.getElementById('filterSurvey').value = '';
+      document.getElementById('filterProcess').value = '';
+      document.getElementById('filterVillage').value = '';
+      document.getElementById('filterTag').value = '';
+      currentPage = 1;
+      loadTasks();
+    }
+
+    // 事件监听
+    document.getElementById('searchInput').addEventListener('input', () => {
+      clearTimeout(searchTimer);
+      searchTimer = setTimeout(() => { currentPage = 1; loadTasks(); }, 300);
+    });
+
+    document.getElementById('filterSurvey').addEventListener('change', () => { currentPage = 1; loadTasks(); });
+    document.getElementById('filterProcess').addEventListener('change', () => { currentPage = 1; loadTasks(); });
+    document.getElementById('filterVillage').addEventListener('change', () => { currentPage = 1; loadTasks(); });
+    document.getElementById('filterTag').addEventListener('change', () => { currentPage = 1; loadTasks(); });
+
+    // 初始化
+    initFiltersFromUrl();
+    loadFilterOptions();
+    loadTasks();
+  </script>
+</body>
+</html>

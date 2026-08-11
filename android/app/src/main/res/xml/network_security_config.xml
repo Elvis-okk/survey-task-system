@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 网络安全配置 - 允许HTTP明文传输（支持内网服务器） -->
+<network-security-config>
+    <!-- 允许所有域名的明文HTTP流量 -->
+    <base-config cleartextTrafficPermitted="true">
+        <trust-anchors>
+            <certificates src="system" />
+            <certificates src="user" />
+        </trust-anchors>
+    </base-config>
+</network-security-config>

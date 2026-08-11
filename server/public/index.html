@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>登录 - 查勘任务管理系统</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div class="login-page">
+    <div class="login-card">
+      <!-- Logo -->
+      <div class="login-logo">
+        <div class="logo-circle">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/>
+          </svg>
+        </div>
+        <h1>查勘任务管理系统</h1>
+        <p>请登录您的账号</p>
+      </div>
+
+      <!-- 登录表单 -->
+      <form id="loginForm" class="login-form">
+        <!-- 服务器地址 -->
+        <div class="form-group">
+          <label class="form-label">服务器地址</label>
+          <input type="text" id="serverUrl" class="form-control"
+            placeholder="例如: http://192.168.1.100:3000">
+          <div class="form-hint">留空则使用当前页面地址</div>
+        </div>
+
+        <!-- 用户名 -->
+        <div class="form-group">
+          <label class="form-label">用户名</label>
+          <input type="text" id="username" class="form-control" placeholder="请输入用户名" required autocomplete="username">
+        </div>
+
+        <!-- 密码 -->
+        <div class="form-group">
+          <label class="form-label">密码</label>
+          <input type="password" id="password" class="form-control" placeholder="请输入密码" required autocomplete="current-password">
+        </div>
+
+        <!-- 错误提示 -->
+        <div id="errorMsg" class="login-error"></div>
+
+        <!-- 登录按钮 -->
+        <button type="submit" id="loginBtn" class="btn btn-primary login-btn">
+          <span id="btnText">登 录</span>
+          <div id="btnSpinner" class="btn-spinner hidden"></div>
+        </button>
+      </form>
+
+      <div class="login-footer">
+        <p>查勘任务管理系统 v1.0</p>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // 初始化服务器地址
+    const savedApiBase = localStorage.getItem('apiBase');
+    if (savedApiBase) {
+      document.getElementById('serverUrl').value = savedApiBase;
+    }
+
+    // 获取API基础URL
+    function getBaseUrl() {
+      const serverUrl = document.getElementById('serverUrl').value.trim();
+      if (serverUrl) {
+        return serverUrl.replace(/\/$/, '');
+      }
+      return window.location.origin;
+    }
+
+    // 登录表单提交
+    document.getElementById('loginForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const username = document.getElementById('username').value.trim();
+      const password = document.getElementById('password').value;
+      const serverUrl = document.getElementById('serverUrl').value.trim();
+      const errorMsg = document.getElementById('errorMsg');
+      const btnText = document.getElementById('btnText');
+      const btnSpinner = document.getElementById('btnSpinner');
+      const loginBtn = document.getElementById('loginBtn');
+
+      // 清除错误
+      errorMsg.classList.remove('show');
+
+      // 显示加载状态
+      btnText.textContent = '登录中...';
+      btnSpinner.classList.remove('hidden');
+      loginBtn.disabled = true;
+
+      try {
+        const baseUrl = getBaseUrl();
+        const response = await fetch(`${baseUrl}/api/auth/login`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, password })
+        });
+
+        const result = await response.json();
+
+        if (result.code === 0) {
+          // 保存token和用户信息
+          localStorage.setItem('token', result.data.token);
+          localStorage.setItem('user', JSON.stringify(result.data.user));
+          if (serverUrl) {
+            localStorage.setItem('apiBase', serverUrl);
+          } else {
+            localStorage.removeItem('apiBase');
+          }
+          // 跳转到仪表板
+          window.location.href = 'dashboard.html';
+        } else {
+          errorMsg.textContent = result.message || '登录失败';
+          errorMsg.classList.add('show');
+        }
+      } catch (err) {
+        errorMsg.textContent = '无法连接到服务器，请检查服务器地址';
+        errorMsg.classList.add('show');
+      } finally {
+        btnText.textContent = '登 录';
+        btnSpinner.classList.add('hidden');
+        loginBtn.disabled = false;
+      }
+    });
+
+    // 检查是否已登录
+    (async function checkExistingAuth() {
+      const token = localStorage.getItem('token');
+      if (!token) return;
+
+      try {
+        const apiBase = localStorage.getItem('apiBase');
+        const baseUrl = apiBase ? apiBase.replace(/\/$/, '') : window.location.origin;
+        const res = await fetch(`${baseUrl}/api/auth/me`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const result = await res.json();
+        if (result.code === 0) {
+          window.location.href = 'dashboard.html';
+        }
+      } catch (e) {
+        // 忽略错误，留在登录页
+      }
+    })();
+  </script>
+</body>
+</html>

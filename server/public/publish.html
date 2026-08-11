@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>发布任务 - 查勘任务管理系统</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div id="topNav"></div>
+
+  <div class="page-container">
+    <div class="page-header">
+      <h2>发布新任务</h2>
+      <p class="text-muted">填写任务信息并发布</p>
+    </div>
+
+    <form id="publishForm" class="card">
+      <!-- 基本信息 -->
+      <div class="form-section">
+        <h3 class="form-section-title">基本信息</h3>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">任务标题 <span class="text-danger">*</span></label>
+            <input type="text" id="title" class="form-control" placeholder="请输入任务标题" required maxlength="100">
+          </div>
+        </div>
+        <div class="form-row form-row-2">
+          <div class="form-group">
+            <label class="form-label">标签</label>
+            <select id="tag" class="form-control">
+              <option value="">选择标签</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">所属村庄 <span class="text-danger">*</span></label>
+            <select id="village" class="form-control" required>
+              <option value="">选择村庄</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row form-row-2">
+          <div class="form-group">
+            <label class="form-label">发布时间</label>
+            <input type="datetime-local" id="publishTime" class="form-control">
+          </div>
+          <div class="form-group">
+            <label class="form-label">指派查勘员</label>
+            <select id="assignedTo" class="form-control">
+              <option value="">不指派</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- 联系信息 -->
+      <div class="form-section">
+        <h3 class="form-section-title">联系信息</h3>
+        <div class="form-group">
+          <label class="form-label">详细地址</label>
+          <input type="text" id="address" class="form-control" placeholder="请输入详细地址" maxlength="200">
+        </div>
+        <div class="form-row form-row-2">
+          <div class="form-group">
+            <label class="form-label">联系电话</label>
+            <input type="tel" id="contactPhone" class="form-control" placeholder="请输入联系电话" maxlength="20">
+          </div>
+          <div class="form-group">
+            <label class="form-label">采购信息</label>
+            <input type="text" id="purchaseInfo" class="form-control" placeholder="请输入采购信息" maxlength="200">
+          </div>
+        </div>
+      </div>
+
+      <!-- 补充说明 -->
+      <div class="form-section">
+        <h3 class="form-section-title">补充说明</h3>
+        <div class="form-group">
+          <label class="form-label">备注</label>
+          <textarea id="remark" class="form-control" rows="4" placeholder="请输入备注信息" maxlength="500"></textarea>
+        </div>
+      </div>
+
+      <!-- 提交按钮 -->
+      <div class="form-actions">
+        <button type="button" class="btn btn-secondary" onclick="history.back()">取消</button>
+        <button type="submit" id="submitBtn" class="btn btn-primary">
+          <span id="btnText">发布任务</span>
+          <div id="btnSpinner" class="btn-spinner hidden"></div>
+        </button>
+      </div>
+    </form>
+  </div>
+
+  <div id="bottomNav"></div>
+
+  <script src="js/app.js"></script>
+  <script>
+    const currentUser = App.initPage();
+
+    // 权限检查：查勘员不能发布任务
+    if (currentUser.role === 'surveyor') {
+      App.showToast('您没有发布任务的权限', 'error');
+      setTimeout(() => location.href = 'dashboard.html', 1500);
+    }
+
+    // 加载下拉选项
+    async function loadOptions() {
+      try {
+        const [tags, villages, users] = await Promise.all([
+          App.loadTags(),
+          App.loadVillages(),
+          App.loadUsers()
+        ]);
+
+        // 标签
+        const tagSelect = document.getElementById('tag');
+        tags.forEach(t => {
+          const opt = document.createElement('option');
+          opt.value = t.name;
+          opt.textContent = t.name;
+          tagSelect.appendChild(opt);
+        });
+
+        // 村庄
+        const villageSelect = document.getElementById('village');
+        villages.forEach(v => {
+          const opt = document.createElement('option');
+          opt.value = v.id;
+          opt.textContent = v.name;
+          villageSelect.appendChild(opt);
+        });
+
+        // 查勘员
+        const assignedSelect = document.getElementById('assignedTo');
+        users.filter(u => u.role === 'surveyor' && u.is_active !== 0).forEach(u => {
+          const opt = document.createElement('option');
+          opt.value = u.id;
+          opt.textContent = u.username + (u.display_name ? ` (${u.display_name})` : '');
+          assignedSelect.appendChild(opt);
+        });
+      } catch (e) {
+        console.error('加载选项失败:', e);
+        App.showToast('加载选项失败', 'error');
+      }
+    }
+
+    // 设置默认发布时间为当前时间
+    document.getElementById('publishTime').value = App.getNowDatetimeLocal();
+
+    // 表单提交
+    document.getElementById('publishForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const title = document.getElementById('title').value.trim();
+      const tag = document.getElementById('tag').value;
+      const villageId = document.getElementById('village').value;
+      const publishTime = document.getElementById('publishTime').value;
+      const assignedTo = document.getElementById('assignedTo').value;
+      const address = document.getElementById('address').value.trim();
+      const contactPhone = document.getElementById('contactPhone').value.trim();
+      const purchaseInfo = document.getElementById('purchaseInfo').value.trim();
+      const remark = document.getElementById('remark').value.trim();
+
+      // 验证
+      if (!title) { App.showToast('请输入任务标题', 'warning'); return; }
+      if (!villageId) { App.showToast('请选择所属村庄', 'warning'); return; }
+
+      const submitBtn = document.getElementById('submitBtn');
+      const btnText = document.getElementById('btnText');
+      const btnSpinner = document.getElementById('btnSpinner');
+
+      submitBtn.disabled = true;
+      btnText.textContent = '发布中...';
+      btnSpinner.classList.remove('hidden');
+
+      try {
+        const taskData = {
+          title,
+          village_id: parseInt(villageId),
+          address,
+          contact_phone: contactPhone,
+          purchase_info: purchaseInfo,
+          remark
+        };
+
+        if (tag) taskData.tag = tag;
+        if (publishTime) taskData.publish_time = publishTime;
+        if (assignedTo) taskData.assigned_to = parseInt(assignedTo);
+
+        await App.tasks.create(taskData);
+        App.showToast('任务发布成功', 'success');
+        setTimeout(() => location.href = 'tasks.html', 1000);
+      } catch (err) {
+        App.showToast(err.message || '发布失败', 'error');
+      } finally {
+        submitBtn.disabled = false;
+        btnText.textContent = '发布任务';
+        btnSpinner.classList.add('hidden');
+      }
+    });
+
+    loadOptions();
+  </script>
+</body>
+</html>

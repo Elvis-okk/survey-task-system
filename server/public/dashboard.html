@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>仪表板 - 查勘任务管理系统</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div id="topNav"></div>
+
+  <div class="page-container">
+    <!-- 欢迎信息 -->
+    <div class="page-header">
+      <h2 id="welcomeText">欢迎回来</h2>
+      <p id="dateText" class="text-muted"></p>
+    </div>
+
+    <!-- 统计卡片 -->
+    <div class="stats-grid" id="statsGrid">
+      <div class="stat-card" onclick="location.href='tasks.html'">
+        <div class="stat-icon" style="background:rgba(79,70,229,0.1);color:#4F46E5">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+        </div>
+        <div class="stat-info">
+          <span class="stat-value" id="statTotal">-</span>
+          <span class="stat-label">全部任务</span>
+        </div>
+      </div>
+      <div class="stat-card" onclick="location.href='tasks.html?survey_status=not_surveyed'">
+        <div class="stat-icon" style="background:rgba(245,158,11,0.1);color:#F59E0B">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+        </div>
+        <div class="stat-info">
+          <span class="stat-value" id="statPending">-</span>
+          <span class="stat-label">待查勘</span>
+        </div>
+      </div>
+      <div class="stat-card" onclick="location.href='tasks.html?process_status=pending'">
+        <div class="stat-icon" style="background:rgba(79,70,229,0.1);color:#4F46E5">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v4m0 12v4m-7.07-15.07l2.83 2.83m8.48 8.48l2.83 2.83M2 12h4m12 0h4M4.93 19.07l2.83-2.83m8.48-8.48l2.83-2.83"/></svg>
+        </div>
+        <div class="stat-info">
+          <span class="stat-value" id="statProcessing">-</span>
+          <span class="stat-label">处理中</span>
+        </div>
+      </div>
+      <div class="stat-card" onclick="location.href='completed.html'">
+        <div class="stat-icon" style="background:rgba(16,185,129,0.1);color:#10B981">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+        </div>
+        <div class="stat-info">
+          <span class="stat-value" id="statCompleted">-</span>
+          <span class="stat-label">已完成</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 快捷操作 -->
+    <div class="section-header">
+      <h3>快捷操作</h3>
+    </div>
+    <div class="quick-actions" id="quickActions">
+      <a href="publish.html" class="quick-action-btn" id="actionPublish">
+        <div class="quick-action-icon" style="background:rgba(79,70,229,0.1);color:#4F46E5">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        </div>
+        <span>发布任务</span>
+      </a>
+      <a href="tasks.html" class="quick-action-btn">
+        <div class="quick-action-icon" style="background:rgba(16,185,129,0.1);color:#10B981">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+        </div>
+        <span>任务列表</span>
+      </a>
+      <a href="completed.html" class="quick-action-btn">
+        <div class="quick-action-icon" style="background:rgba(245,158,11,0.1);color:#F59E0B">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+        </div>
+        <span>已完成</span>
+      </a>
+      <a href="admin.html" class="quick-action-btn" id="actionAdmin" style="display:none">
+        <div class="quick-action-icon" style="background:rgba(239,68,68,0.1);color:#EF4444">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+        </div>
+        <span>系统管理</span>
+      </a>
+    </div>
+
+    <!-- 最近任务 -->
+    <div class="section-header">
+      <h3>最近任务</h3>
+      <a href="tasks.html" class="link">查看全部</a>
+    </div>
+    <div id="recentTasks" class="task-list">
+      <div class="loading-spinner"></div>
+    </div>
+  </div>
+
+  <div id="bottomNav"></div>
+
+  <script src="js/app.js"></script>
+  <script>
+    // 初始化页面
+    const currentUser = App.initPage();
+
+    // 设置欢迎信息
+    document.getElementById('welcomeText').textContent = `欢迎回来，${currentUser.username}`;
+    document.getElementById('dateText').textContent = new Date().toLocaleDateString('zh-CN', {
+      year: 'numeric', month: 'long', day: 'numeric', weekday: 'long'
+    });
+
+    // 角色权限控制
+    const role = currentUser.role;
+    if (role === 'surveyor') {
+      // 查勘员不能发布任务
+      document.getElementById('actionPublish').style.display = 'none';
+    }
+    if (role === 'admin') {
+      document.getElementById('actionAdmin').style.display = '';
+    }
+
+    // 加载统计数据
+    async function loadStats() {
+      try {
+        const stats = await App.tasks.stats();
+        document.getElementById('statTotal').textContent = stats.total || 0;
+        document.getElementById('statPending').textContent = stats.not_surveyed || 0;
+        document.getElementById('statProcessing').textContent = (stats.pending || 0) + (stats.resurvey || 0);
+        document.getElementById('statCompleted').textContent = stats.archived || 0;
+      } catch (e) {
+        console.error('加载统计失败:', e);
+        document.getElementById('statTotal').textContent = '0';
+        document.getElementById('statPending').textContent = '0';
+        document.getElementById('statProcessing').textContent = '0';
+        document.getElementById('statCompleted').textContent = '0';
+      }
+    }
+
+    // 加载最近任务
+    async function loadRecentTasks() {
+      const container = document.getElementById('recentTasks');
+      try {
+        const params = { page: 1, pageSize: 5 };
+        // 非管理员只能看自己的任务
+        if (role === 'surveyor') {
+          params.assigned_to = currentUser.id;
+        } else if (role === 'publisher') {
+          params.created_by = currentUser.id;
+        }
+
+        const result = await App.tasks.list(params);
+        const tasks = result.tasks || [];
+
+        if (tasks.length === 0) {
+          container.innerHTML = `
+            <div class="empty-state">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="48" height="48">
+                <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+              </svg>
+              <p>暂无任务</p>
+            </div>`;
+          return;
+        }
+
+        container.innerHTML = tasks.map(task => `
+          <div class="task-card" onclick="location.href='task-detail.html?id=${task.id}'">
+            <div class="task-card-header">
+              <span class="task-card-title">${escapeHtml(task.title)}</span>
+              ${App.surveyStatusBadge(task.survey_status)}
+            </div>
+            <div class="task-card-body">
+              <div class="task-card-info">
+                <span>📍 ${escapeHtml(task.village_name || task.address || '未指定')}</span>
+                <span>📅 ${App.formatDateShort(task.publish_time || task.created_at)}</span>
+              </div>
+                            ${App.taskTagBadge(task)}
+            </div>
+            <div class="task-card-footer">
+              ${App.processStatusBadge(task.process_status)}
+            </div>
+          </div>
+        `).join('');
+      } catch (e) {
+        console.error('加载任务失败:', e);
+        container.innerHTML = '<div class="empty-state"><p>加载失败，请刷新重试</p></div>';
+      }
+    }
+
+    // 加载数据
+    loadStats();
+    loadRecentTasks();
+  </script>
+</body>
+</html>

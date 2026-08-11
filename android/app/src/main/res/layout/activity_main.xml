@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 主页面布局 - WebView容器，支持下拉刷新和错误页面 -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical">
+
+    <!-- 顶部进度条 -->
+    <ProgressBar
+        android:id="@+id/progress_bar"
+        style="@android:style/Widget.ProgressBar.Horizontal"
+        android:layout_width="match_parent"
+        android:layout_height="3dp"
+        android:max="100"
+        android:progressDrawable="@drawable/progress_bar_drawable"
+        android:visibility="gone" />
+
+    <!-- 下拉刷新布局 -->
+    <androidx.swiperefreshlayout.widget.SwipeRefreshLayout
+        android:id="@+id/swipe_refresh"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent">
+
+        <!-- 自定义WebView -->
+        <com.survey.task.SurveyWebView
+            android:id="@+id/web_view"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent" />
+
+    </androidx.swiperefreshlayout.widget.SwipeRefreshLayout>
+
+    <!-- 错误页面布局 -->
+    <LinearLayout
+        android:id="@+id/error_layout"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:gravity="center"
+        android:background="@android:color/white"
+        android:visibility="gone"
+        android:padding="32dp">
+
+        <!-- 错误图标 -->
+        <ImageView
+            android:layout_width="80dp"
+            android:layout_height="80dp"
+            android:src="@android:drawable/ic_dialog_alert"
+            android:contentDescription="加载失败"
+            android:layout_marginBottom="16dp"
+            app:tint="@color/colorError" />
+
+        <!-- 错误标题 -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="加载失败"
+            android:textSize="20sp"
+            android:textColor="#333333"
+            android:textStyle="bold"
+            android:layout_marginBottom="8dp" />
+
+        <!-- 错误描述 -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="无法连接到服务器，请检查网络设置或服务器地址"
+            android:textSize="14sp"
+            android:textColor="#999999"
+            android:gravity="center"
+            android:layout_marginBottom="24dp" />
+
+        <!-- 重试按钮 -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_retry"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="重新加载"
+            android:textColor="@android:color/white"
+            app:backgroundTint="@color/colorPrimary"
+            app:cornerRadius="8dp"
+            app:icon="@android:drawable/ic_menu_rotate"
+            app:iconGravity="textStart" />
+
+    </LinearLayout>
+
+</LinearLayout>

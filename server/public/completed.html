@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>已完成任务 - 查勘任务管理系统</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div id="topNav"></div>
+
+  <div class="page-container">
+    <div class="page-header">
+      <h2>已完成任务</h2>
+    </div>
+
+    <!-- 筛选 -->
+    <div class="card filter-card">
+      <div class="filter-bar">
+        <div class="filter-item">
+          <input type="text" id="searchInput" class="form-control" placeholder="搜索任务标题...">
+        </div>
+        <div class="filter-item">
+          <select id="filterVillage" class="form-control">
+            <option value="">全部村庄</option>
+          </select>
+        </div>
+        <div class="filter-item">
+          <button class="btn btn-secondary btn-sm" onclick="resetFilters()">重置</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 统计 -->
+    <div class="stats-grid stats-grid-sm">
+      <div class="stat-card">
+        <div class="stat-info">
+          <span class="stat-value" id="statTotal">0</span>
+          <span class="stat-label">已完成总数</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 任务列表 -->
+    <div id="taskList" class="task-list">
+      <div class="loading-spinner"></div>
+    </div>
+
+    <!-- 分页 -->
+    <div id="pagination" class="pagination"></div>
+  </div>
+
+  <div id="bottomNav"></div>
+
+  <script src="js/app.js"></script>
+  <script>
+    const currentUser = App.initPage();
+
+    let currentPage = 1;
+    const pageSize = 10;
+    let totalPages = 1;
+    let searchTimer = null;
+
+    // 加载筛选选项
+    async function loadFilterOptions() {
+      try {
+        const villages = await App.loadVillages();
+        const villageSelect = document.getElementById('filterVillage');
+        villages.forEach(v => {
+          const opt = document.createElement('option');
+          opt.value = v.id;
+          opt.textContent = v.name;
+          villageSelect.appendChild(opt);
+        });
+      } catch (e) {
+        console.error('加载选项失败:', e);
+      }
+    }
+
+    // 加载已完成任务
+    async function loadCompleted() {
+      const container = document.getElementById('taskList');
+      container.innerHTML = '<div class="loading-spinner"></div>';
+
+      try {
+        const params = {
+          page: currentPage,
+          pageSize
+        };
+
+        const search = document.getElementById('searchInput').value.trim();
+        if (search) params.keyword = search;
+
+        const villageId = document.getElementById('filterVillage').value;
+        if (villageId) params.village_id = parseInt(villageId);
+
+        const result = await App.tasks.completed(params);
+        const tasks = result.tasks || [];
+        const total = result.total || 0;
+        totalPages = Math.ceil(total / pageSize) || 1;
+
+        document.getElementById('statTotal').textContent = total;
+
+        if (tasks.length === 0) {
+          container.innerHTML = `
+            <div class="empty-state">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="48" height="48">
+                <path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>
+              </svg>
+              <p>暂无已完成任务</p>
+            </div>`;
+          document.getElementById('pagination').innerHTML = '';
+          return;
+        }
+
+        container.innerHTML = tasks.map(task => `
+          <div class="task-card" onclick="location.href='task-detail.html?id=${task.id}'">
+            <div class="task-card-header">
+              <span class="task-card-title">${escapeHtml(task.title)}</span>
+              <span class="badge badge-success">已完成</span>
+            </div>
+            <div class="task-card-body">
+              <div class="task-card-info">
+                <span>📍 ${escapeHtml(task.village_name || task.address || '未指定')}</span>
+                <span>📅 ${App.formatDateShort(task.publish_time || task.created_at)}</span>
+                ${task.assigned_to ? `<span>👤 ${App.getUserName(task.assigned_to)}</span>` : ''}
+              </div>
+                            ${App.taskTagBadge(task)}
+            </div>
+          </div>
+        `).join('');
+
+        renderPagination(total);
+      } catch (e) {
+        console.error('加载已完成任务失败:', e);
+        container.innerHTML = '<div class="empty-state"><p>加载失败，请刷新重试</p></div>';
+      }
+    }
+
+    // 渲染分页
+    function renderPagination(total) {
+      const container = document.getElementById('pagination');
+      if (totalPages <= 1) { container.innerHTML = ''; return; }
+
+      let html = '';
+      html += `<button class="page-btn" ${currentPage <= 1 ? 'disabled' : ''} onclick="goPage(${currentPage - 1})">上一页</button>`;
+
+      const start = Math.max(1, currentPage - 2);
+      const end = Math.min(totalPages, currentPage + 2);
+
+      if (start > 1) {
+        html += `<button class="page-btn" onclick="goPage(1)">1</button>`;
+        if (start > 2) html += '<span class="page-ellipsis">...</span>';
+      }
+
+      for (let i = start; i <= end; i++) {
+        html += `<button class="page-btn ${i === currentPage ? 'active' : ''}" onclick="goPage(${i})">${i}</button>`;
+      }
+
+      if (end < totalPages) {
+        if (end < totalPages - 1) html += '<span class="page-ellipsis">...</span>';
+        html += `<button class="page-btn" onclick="goPage(${totalPages})">${totalPages}</button>`;
+      }
+
+      html += `<button class="page-btn" ${currentPage >= totalPages ? 'disabled' : ''} onclick="goPage(${currentPage + 1})">下一页</button>`;
+      container.innerHTML = html;
+    }
+
+    function goPage(page) {
+      if (page < 1 || page > totalPages) return;
+      currentPage = page;
+      loadCompleted();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function resetFilters() {
+      document.getElementById('searchInput').value = '';
+      document.getElementById('filterVillage').value = '';
+      currentPage = 1;
+      loadCompleted();
+    }
+
+    // 事件
+    document.getElementById('searchInput').addEventListener('input', () => {
+      clearTimeout(searchTimer);
+      searchTimer = setTimeout(() => { currentPage = 1; loadCompleted(); }, 300);
+    });
+    document.getElementById('filterVillage').addEventListener('change', () => { currentPage = 1; loadCompleted(); });
+
+    // 初始化
+    loadFilterOptions();
+    loadCompleted();
+  </script>
+</body>
+</html>

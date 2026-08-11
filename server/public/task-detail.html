@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>任务详情 - 查勘任务管理系统</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div id="topNav"></div>
+
+  <div class="page-container">
+    <!-- 返回 -->
+    <div class="page-header">
+      <a href="tasks.html" class="btn btn-secondary btn-sm">← 返回列表</a>
+    </div>
+
+    <!-- 任务详情 -->
+    <div id="taskDetail" class="card">
+      <div class="loading-spinner"></div>
+    </div>
+
+    <!-- 操作按钮区 -->
+    <div id="actionButtons" class="card" style="display:none">
+      <h3 class="form-section-title">操作</h3>
+      <div id="actionContent"></div>
+    </div>
+
+    <!-- 查勘状态更新弹窗 -->
+    <div id="surveyModal" class="modal" style="display:none">
+      <div class="modal-overlay" onclick="closeSurveyModal()"></div>
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>更新查勘状态</h3>
+          <button class="modal-close" onclick="closeSurveyModal()">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div class="form-group">
+            <label class="form-label">查勘状态</label>
+            <select id="surveyStatus" class="form-control">
+              <option value="not_surveyed">待查勘</option>
+              <option value="surveyed">已查勘</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">查勘备注</label>
+            <textarea id="surveyRemark" class="form-control" rows="3" placeholder="请输入查勘备注"></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" onclick="closeSurveyModal()">取消</button>
+          <button class="btn btn-primary" id="submitSurveyBtn" onclick="submitSurvey()">确认</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 处理状态更新弹窗 -->
+    <div id="processModal" class="modal" style="display:none">
+      <div class="modal-overlay" onclick="closeProcessModal()"></div>
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>更新处理状态</h3>
+          <button class="modal-close" onclick="closeProcessModal()">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div class="form-group">
+            <label class="form-label">处理状态</label>
+            <select id="processStatus" class="form-control">
+              <option value="pending">待处理</option>
+              <option value="resurvey">需复查</option>
+              <option value="missing_docs">缺资料</option>
+              <option value="submitted">已提交</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">处理备注</label>
+            <textarea id="processRemark" class="form-control" rows="3" placeholder="请输入处理备注"></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" onclick="closeProcessModal()">取消</button>
+          <button class="btn btn-primary" id="submitProcessBtn" onclick="submitProcess()">确认</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 重新指派弹窗 -->
+    <div id="reassignModal" class="modal" style="display:none">
+      <div class="modal-overlay" onclick="closeReassignModal()"></div>
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>重新指派</h3>
+          <button class="modal-close" onclick="closeReassignModal()">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div class="form-group">
+            <label class="form-label">指派给</label>
+            <select id="reassignUser" class="form-control">
+              <option value="">请选择查勘员</option>
+            </select>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" onclick="closeReassignModal()">取消</button>
+          <button class="btn btn-primary" onclick="submitReassign()">确认指派</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="bottomNav"></div>
+
+  <script src="js/app.js"></script>
+  <script>
+    const currentUser = App.initPage();
+    const role = currentUser.role;
+    let taskId = null;
+    let taskData = null;
+
+    // 获取任务ID
+    const urlParams = new URLSearchParams(location.search);
+    taskId = urlParams.get('id');
+    if (!taskId) {
+      App.showToast('任务ID不存在', 'error');
+      setTimeout(() => location.href = 'tasks.html', 1500);
+    }
+
+    // 加载任务详情
+    async function loadTask() {
+      const container = document.getElementById('taskDetail');
+      container.innerHTML = '<div class="loading-spinner"></div>';
+
+      try {
+        const { task, logs } = await App.tasks.get(taskId);
+        taskData = task;
+        renderTaskDetail(taskData);
+        renderActions(taskData);
+      } catch (e) {
+        container.innerHTML = '<div class="empty-state"><p>加载任务失败</p></div>';
+      }
+    }
+
+    // 渲染任务详情
+    function renderTaskDetail(task) {
+      const container = document.getElementById('taskDetail');
+      container.innerHTML = `
+        <div class="detail-header">
+          <h2>${escapeHtml(task.title)}</h2>
+          <div class="detail-badges">
+            ${App.surveyStatusBadge(task.survey_status)}
+            ${App.processStatusBadge(task.process_status)}
+                        ${App.taskTagBadge(task)}
+          </div>
+        </div>
+        <div class="detail-grid">
+          <div class="detail-section">
+            <h4>基本信息</h4>
+            <div class="detail-item">
+              <span class="detail-label">任务ID</span>
+              <span class="detail-value">#${task.id}</span>
+            </div>
+            <div class="detail-item">
+              <span class="detail-label">所属村庄</span>
+              <span class="detail-value">${escapeHtml(task.village_name || '未指定')}</span>
+            </div>
+            <div class="detail-item">
+              <span class="detail-label">详细地址</span>
+              <span class="detail-value">${escapeHtml(task.address || '未填写')}</span>
+            </div>
+            <div class="detail-item">
+              <span class="detail-label">发布时间</span>
+              <span class="detail-value">${App.formatDate(task.publish_time || task.created_at)}</span>
+            </div>
+            <div class="detail-item">
+              <span class="detail-label">创建时间</span>
+              <span class="detail-value">${App.formatDate(task.created_at)}</span>
+            </div>
+          </div>
+          <div class="detail-section">
+            <h4>联系信息</h4>
+            <div class="detail-item">
+              <span class="detail-label">联系电话</span>
+              <span class="detail-value">${task.contact_phone ? `<a href="tel:${task.contact_phone}">${escapeHtml(task.contact_phone)}</a>` : '未填写'}</span>
+            </div>
+            <div class="detail-item">
+              <span class="detail-label">采购信息</span>
+              <span class="detail-value">${escapeHtml(task.purchase_info || '未填写')}</span>
+            </div>
+          </div>
+          <div class="detail-section">
+            <h4>人员信息</h4>
+            <div class="detail-item">
+              <span class="detail-label">创建人</span>
+              <span class="detail-value">${App.getUserName(task.created_by)}</span>
+            </div>
+            <div class="detail-item">
+              <span class="detail-label">指派查勘员</span>
+              <span class="detail-value">${task.assigned_to ? App.getUserName(task.assigned_to) : '未指派'}</span>
+            </div>
+          </div>
+          ${task.remark ? `
+          <div class="detail-section">
+            <h4>备注</h4>
+            <p class="detail-remark">${escapeHtml(task.remark)}</p>
+          </div>` : ''}
+          ${task.survey_remark ? `
+          <div class="detail-section">
+            <h4>查勘备注</h4>
+            <p class="detail-remark">${escapeHtml(task.survey_remark)}</p>
+          </div>` : ''}
+          ${task.process_remark ? `
+          <div class="detail-section">
+            <h4>处理备注</h4>
+            <p class="detail-remark">${escapeHtml(task.process_remark)}</p>
+          </div>` : ''}
+        </div>
+      `;
+    }
+
+    // 渲染操作按钮
+    function renderActions(task) {
+      const container = document.getElementById('actionButtons');
+      const content = document.getElementById('actionContent');
+      let html = '<div class="action-buttons">';
+
+      // 查勘员：更新查勘状态
+      if (role === 'surveyor' || role === 'admin') {
+        if (task.survey_status === 'not_surveyed') {
+          html += '<button class="btn btn-primary" onclick="openSurveyModal()">更新查勘状态</button>';
+        }
+      }
+
+      // 管理员/发布者：更新处理状态
+      if (role === 'admin' || role === 'publisher') {
+        if (task.survey_status === 'surveyed') {
+          html += '<button class="btn btn-warning" onclick="openProcessModal()">更新处理状态</button>';
+        }
+      }
+
+      // 管理员：重新指派
+      if (role === 'admin') {
+        html += '<button class="btn btn-secondary" onclick="openReassignModal()">重新指派</button>';
+      }
+
+      html += '</div>';
+      content.innerHTML = html;
+
+      // 有操作按钮时显示
+      if (html.includes('onclick')) {
+        container.style.display = '';
+      }
+    }
+
+    // 查勘状态弹窗
+    function openSurveyModal() {
+      document.getElementById('surveyStatus').value = taskData.survey_status || 'not_surveyed';
+      document.getElementById('surveyRemark').value = '';
+      document.getElementById('surveyModal').style.display = '';
+    }
+    function closeSurveyModal() {
+      document.getElementById('surveyModal').style.display = 'none';
+    }
+
+    async function submitSurvey() {
+      const status = document.getElementById('surveyStatus').value;
+      const remark = document.getElementById('surveyRemark').value.trim();
+      const btn = document.getElementById('submitSurveyBtn');
+      btn.disabled = true;
+      btn.textContent = '提交中...';
+
+      try {
+        await App.tasks.updateSurvey(taskId, { survey_status: status, survey_remark: remark });
+        App.showToast('查勘状态更新成功', 'success');
+        closeSurveyModal();
+        loadTask();
+      } catch (e) {
+        App.showToast(e.message || '更新失败', 'error');
+      } finally {
+        btn.disabled = false;
+        btn.textContent = '确认';
+      }
+    }
+
+    // 处理状态弹窗
+    function openProcessModal() {
+      document.getElementById('processStatus').value = taskData.process_status || 'pending';
+      document.getElementById('processRemark').value = '';
+      document.getElementById('processModal').style.display = '';
+    }
+    function closeProcessModal() {
+      document.getElementById('processModal').style.display = 'none';
+    }
+
+    async function submitProcess() {
+      const status = document.getElementById('processStatus').value;
+      const remark = document.getElementById('processRemark').value.trim();
+      const btn = document.getElementById('submitProcessBtn');
+      btn.disabled = true;
+      btn.textContent = '提交中...';
+
+      try {
+        await App.tasks.updateProcess(taskId, { process_status: status, process_remark: remark });
+        App.showToast('处理状态更新成功', 'success');
+        closeProcessModal();
+        loadTask();
+      } catch (e) {
+        App.showToast(e.message || '更新失败', 'error');
+      } finally {
+        btn.disabled = false;
+        btn.textContent = '确认';
+      }
+    }
+
+    // 重新指派弹窗
+    async function openReassignModal() {
+      document.getElementById('reassignModal').style.display = '';
+      const select = document.getElementById('reassignUser');
+      if (select.options.length <= 1) {
+        try {
+          const users = await App.loadUsers();
+          select.innerHTML = '<option value="">请选择查勘员</option>';
+          users.filter(u => u.role === 'surveyor' && u.is_active !== 0).forEach(u => {
+            const opt = document.createElement('option');
+            opt.value = u.id;
+            opt.textContent = u.username + (u.display_name ? ` (${u.display_name})` : '');
+            if (taskData.assigned_to === u.id) opt.selected = true;
+            select.appendChild(opt);
+          });
+        } catch (e) {
+          App.showToast('加载用户列表失败', 'error');
+        }
+      }
+    }
+    function closeReassignModal() {
+      document.getElementById('reassignModal').style.display = 'none';
+    }
+
+    async function submitReassign() {
+      const userId = document.getElementById('reassignUser').value;
+      if (!userId) { App.showToast('请选择查勘员', 'warning'); return; }
+
+      try {
+        await App.tasks.reassign(taskId, { assigned_to: parseInt(userId) });
+        App.showToast('指派成功', 'success');
+        closeReassignModal();
+        loadTask();
+      } catch (e) {
+        App.showToast(e.message || '指派失败', 'error');
+      }
+    }
+
+    // 加载
+    loadTask();
+  </script>
+</body>
+</html>

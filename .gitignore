@@ -1,0 +1,10 @@
+# Android  
+build/  
+.gradle/  
+local.properties  
+*.apk  
+*.aab  
+.idea/  
+node_modules/  
+.env  
+__pycache__/ 

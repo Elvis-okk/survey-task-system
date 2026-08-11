@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>系统管理 - 查勘任务管理系统</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div id="topNav"></div>
+
+  <div class="page-container">
+    <div class="page-header">
+      <h2>系统管理</h2>
+    </div>
+
+    <!-- 标签页 -->
+    <div class="tabs">
+      <button class="tab active" onclick="switchTab('users')">用户管理</button>
+      <button class="tab" onclick="switchTab('tags')">标签管理</button>
+      <button class="tab" onclick="switchTab('villages')">村庄管理</button>
+    </div>
+
+    <!-- 用户管理 -->
+    <div id="tab-users" class="tab-content active">
+      <div class="section-header">
+        <h3>用户列表</h3>
+        <button class="btn btn-primary btn-sm" onclick="openUserModal()">+ 添加用户</button>
+      </div>
+      <div class="card">
+        <div class="table-responsive">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>用户名</th>
+                <th>显示名</th>
+                <th>角色</th>
+                <th>状态</th>
+                <th>操作</th>
+              </tr>
+            </thead>
+            <tbody id="userTableBody">
+              <tr><td colspan="6"><div class="loading-spinner"></div></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- 标签管理 -->
+    <div id="tab-tags" class="tab-content">
+      <div class="section-header">
+        <h3>标签列表</h3>
+        <button class="btn btn-primary btn-sm" onclick="openTagModal()">+ 添加标签</button>
+      </div>
+      <div class="card">
+        <div class="table-responsive">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>名称</th>
+                <th>颜色</th>
+                <th>操作</th>
+              </tr>
+            </thead>
+            <tbody id="tagTableBody">
+              <tr><td colspan="4"><div class="loading-spinner"></div></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- 村庄管理 -->
+    <div id="tab-villages" class="tab-content">
+      <div class="section-header">
+        <h3>村庄列表</h3>
+        <button class="btn btn-primary btn-sm" onclick="openVillageModal()">+ 添加村庄</button>
+      </div>
+      <div class="card">
+        <div class="table-responsive">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>名称</th>
+                <th>负责人</th>
+                <th>联系电话</th>
+                <th>操作</th>
+              </tr>
+            </thead>
+            <tbody id="villageTableBody">
+              <tr><td colspan="5"><div class="loading-spinner"></div></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 用户弹窗 -->
+  <div id="userModal" class="modal" style="display:none">
+    <div class="modal-overlay" onclick="closeUserModal()"></div>
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="userModalTitle">添加用户</h3>
+        <button class="modal-close" onclick="closeUserModal()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="editUserId">
+        <div class="form-group">
+          <label class="form-label">用户名 <span class="text-danger">*</span></label>
+          <input type="text" id="userUsername" class="form-control" placeholder="请输入用户名" maxlength="50">
+        </div>
+        <div class="form-group" id="passwordGroup">
+          <label class="form-label">密码 <span class="text-danger">*</span></label>
+          <input type="password" id="userPassword" class="form-control" placeholder="请输入密码" maxlength="100">
+        </div>
+        <div class="form-group">
+          <label class="form-label">显示名</label>
+          <input type="text" id="userDisplayName" class="form-control" placeholder="请输入显示名" maxlength="50">
+        </div>
+        <div class="form-group">
+          <label class="form-label">角色 <span class="text-danger">*</span></label>
+          <select id="userRole" class="form-control">
+            <option value="surveyor">查勘员</option>
+            <option value="publisher">发布者</option>
+            <option value="admin">管理员</option>
+          </select>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeUserModal()">取消</button>
+        <button class="btn btn-primary" id="submitUserBtn" onclick="submitUser()">确认</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 标签弹窗 -->
+  <div id="tagModal" class="modal" style="display:none">
+    <div class="modal-overlay" onclick="closeTagModal()"></div>
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="tagModalTitle">添加标签</h3>
+        <button class="modal-close" onclick="closeTagModal()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="editTagId">
+        <div class="form-group">
+          <label class="form-label">名称 <span class="text-danger">*</span></label>
+          <input type="text" id="tagName" class="form-control" placeholder="请输入标签名称" maxlength="30">
+        </div>
+        <div class="form-group">
+          <label class="form-label">颜色</label>
+          <input type="color" id="tagColor" class="form-control form-color" value="#4F46E5">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeTagModal()">取消</button>
+        <button class="btn btn-primary" onclick="submitTag()">确认</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 村庄弹窗 -->
+  <div id="villageModal" class="modal" style="display:none">
+    <div class="modal-overlay" onclick="closeVillageModal()"></div>
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="villageModalTitle">添加村庄</h3>
+        <button class="modal-close" onclick="closeVillageModal()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="editVillageId">
+        <div class="form-group">
+          <label class="form-label">名称 <span class="text-danger">*</span></label>
+          <input type="text" id="villageName" class="form-control" placeholder="请输入村庄名称" maxlength="50">
+        </div>
+        <div class="form-group">
+          <label class="form-label">负责人</label>
+          <input type="text" id="villageLeader" class="form-control" placeholder="请输入负责人" maxlength="50">
+        </div>
+        <div class="form-group">
+          <label class="form-label">联系电话</label>
+          <input type="tel" id="villagePhone" class="form-control" placeholder="请输入联系电话" maxlength="20">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeVillageModal()">取消</button>
+        <button class="btn btn-primary" onclick="submitVillage()">确认</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="bottomNav"></div>
+
+  <script src="js/app.js"></script>
+  <script>
+    const currentUser = App.initPage();
+
+    // 权限检查
+    if (currentUser.role !== 'admin') {
+      App.showToast('您没有管理权限', 'error');
+      setTimeout(() => location.href = 'dashboard.html', 1500);
+    }
+
+    // 标签页切换
+    function switchTab(tab) {
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+      event.target.classList.add('active');
+      document.getElementById(`tab-${tab}`).classList.add('active');
+
+      if (tab === 'users') loadUsers();
+      else if (tab === 'tags') loadTags();
+      else if (tab === 'villages') loadVillages();
+    }
+
+    // ========== 用户管理 ==========
+    async function loadUsers() {
+      const tbody = document.getElementById('userTableBody');
+      try {
+        const users = await App.users.list();
+        if (users.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">暂无用户</td></tr>';
+          return;
+        }
+        tbody.innerHTML = users.map(u => `
+          <tr>
+            <td>${u.id}</td>
+            <td>${escapeHtml(u.username)}</td>
+            <td>${escapeHtml(u.display_name || '-')}</td>
+            <td><span class="badge ${App.roleBadgeClass(u.role)}">${App.roleName(u.role)}</span></td>
+            <td><span class="badge ${u.is_active !== 0 ? 'badge-success' : 'badge-danger'}">${u.is_active !== 0 ? '启用' : '禁用'}</span></td>
+            <td>
+              <button class="btn btn-sm btn-secondary" onclick="editUser(${u.id})">编辑</button>
+              <button class="btn btn-sm ${u.is_active !== 0 ? 'btn-danger' : 'btn-success'}" onclick="toggleUser(${u.id}, ${u.is_active})">${u.is_active !== 0 ? '禁用' : '启用'}</button>
+            </td>
+          </tr>
+        `).join('');
+      } catch (e) {
+        tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">加载失败</td></tr>';
+      }
+    }
+
+    function openUserModal(editId) {
+      document.getElementById('editUserId').value = '';
+      document.getElementById('userUsername').value = '';
+      document.getElementById('userPassword').value = '';
+      document.getElementById('userDisplayName').value = '';
+      document.getElementById('userRole').value = 'surveyor';
+      document.getElementById('userModalTitle').textContent = '添加用户';
+      document.getElementById('passwordGroup').style.display = '';
+      document.getElementById('userUsername').disabled = false;
+      document.getElementById('userModal').style.display = '';
+    }
+
+    async function editUser(id) {
+      try {
+        const users = await App.users.list();
+        const user = users.find(u => u.id === id);
+        if (!user) return;
+        document.getElementById('editUserId').value = user.id;
+        document.getElementById('userUsername').value = user.username;
+        document.getElementById('userUsername').disabled = true;
+        document.getElementById('userPassword').value = '';
+        document.getElementById('passwordGroup').style.display = 'none';
+        document.getElementById('userDisplayName').value = user.display_name || '';
+        document.getElementById('userRole').value = user.role;
+        document.getElementById('userModalTitle').textContent = '编辑用户';
+        document.getElementById('userModal').style.display = '';
+      } catch (e) {
+        App.showToast('加载用户信息失败', 'error');
+      }
+    }
+
+    function closeUserModal() {
+      document.getElementById('userModal').style.display = 'none';
+    }
+
+    async function submitUser() {
+      const editId = document.getElementById('editUserId').value;
+      const username = document.getElementById('userUsername').value.trim();
+      const password = document.getElementById('userPassword').value;
+      const displayName = document.getElementById('userDisplayName').value.trim();
+      const role = document.getElementById('userRole').value;
+
+      if (!username) { App.showToast('请输入用户名', 'warning'); return; }
+      if (!editId && !password) { App.showToast('请输入密码', 'warning'); return; }
+
+      const btn = document.getElementById('submitUserBtn');
+      btn.disabled = true;
+
+      try {
+        if (editId) {
+          await App.users.updateRole(editId, { role });
+          if (displayName) {
+            await App.users.update(editId, { display_name: displayName });
+          }
+          App.showToast('用户更新成功', 'success');
+        } else {
+          await App.users.create({ username, password, display_name: displayName, role });
+          App.showToast('用户创建成功', 'success');
+        }
+        closeUserModal();
+        loadUsers();
+        App.clearCache();
+      } catch (e) {
+        App.showToast(e.message || '操作失败', 'error');
+      } finally {
+        btn.disabled = false;
+      }
+    }
+
+    async function toggleUser(id, currentActive) {
+      const action = currentActive !== 0 ? '禁用' : '启用';
+      const confirmed = await App.showConfirm(`确定${action}该用户吗？`);
+      if (!confirmed) return;
+
+      try {
+        await App.users.delete(id);
+        App.showToast(`用户已${action}`, 'success');
+        loadUsers();
+        App.clearCache();
+      } catch (e) {
+        App.showToast(e.message || '操作失败', 'error');
+      }
+    }
+
+    // ========== 标签管理 ==========
+    async function loadTags() {
+      const tbody = document.getElementById('tagTableBody');
+      try {
+        const tags = await App.settings.tags.list();
+        if (tags.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted">暂无标签</td></tr>';
+          return;
+        }
+        tbody.innerHTML = tags.map(t => `
+          <tr>
+            <td>${t.id}</td>
+            <td>${escapeHtml(t.name)}</td>
+            <td><span style="display:inline-block;width:20px;height:20px;border-radius:4px;background:${t.color || '#4F46E5'};vertical-align:middle"></span></td>
+            <td>
+              <button class="btn btn-sm btn-secondary" onclick="editTag(${t.id})">编辑</button>
+              <button class="btn btn-sm btn-danger" onclick="deleteTag(${t.id})">删除</button>
+            </td>
+          </tr>
+        `).join('');
+      } catch (e) {
+        tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted">加载失败</td></tr>';
+      }
+    }
+
+    function openTagModal() {
+      document.getElementById('editTagId').value = '';
+      document.getElementById('tagName').value = '';
+      document.getElementById('tagColor').value = '#4F46E5';
+      document.getElementById('tagModalTitle').textContent = '添加标签';
+      document.getElementById('tagModal').style.display = '';
+    }
+
+    async function editTag(id) {
+      try {
+        const tags = await App.settings.tags.list();
+        const tag = tags.find(t => t.id === id);
+        if (!tag) return;
+        document.getElementById('editTagId').value = tag.id;
+        document.getElementById('tagName').value = tag.name;
+        document.getElementById('tagColor').value = tag.color || '#4F46E5';
+        document.getElementById('tagModalTitle').textContent = '编辑标签';
+        document.getElementById('tagModal').style.display = '';
+      } catch (e) {
+        App.showToast('加载标签信息失败', 'error');
+      }
+    }
+
+    function closeTagModal() {
+      document.getElementById('tagModal').style.display = 'none';
+    }
+
+    async function submitTag() {
+      const editId = document.getElementById('editTagId').value;
+      const name = document.getElementById('tagName').value.trim();
+      const color = document.getElementById('tagColor').value;
+
+      if (!name) { App.showToast('请输入标签名称', 'warning'); return; }
+
+      try {
+        if (editId) {
+          await App.settings.tags.update(editId, { name, color });
+          App.showToast('标签更新成功', 'success');
+        } else {
+          await App.settings.tags.create({ name, color });
+          App.showToast('标签创建成功', 'success');
+        }
+        closeTagModal();
+        loadTags();
+        App.clearCache();
+      } catch (e) {
+        App.showToast(e.message || '操作失败', 'error');
+      }
+    }
+
+    async function deleteTag(id) {
+      const confirmed = await App.showConfirm('确定删除该标签吗？');
+      if (!confirmed) return;
+      try {
+        await App.settings.tags.delete(id);
+        App.showToast('标签已删除', 'success');
+        loadTags();
+        App.clearCache();
+      } catch (e) {
+        App.showToast(e.message || '删除失败', 'error');
+      }
+    }
+
+    // ========== 村庄管理 ==========
+    async function loadVillages() {
+      const tbody = document.getElementById('villageTableBody');
+      try {
+        const villages = await App.settings.villages.list();
+        if (villages.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">暂无村庄</td></tr>';
+          return;
+        }
+        tbody.innerHTML = villages.map(v => `
+          <tr>
+            <td>${v.id}</td>
+            <td>${escapeHtml(v.name)}</td>
+            <td>${escapeHtml(v.leader || '-')}</td>
+            <td>${escapeHtml(v.contact_phone || '-')}</td>
+            <td>
+              <button class="btn btn-sm btn-secondary" onclick="editVillage(${v.id})">编辑</button>
+              <button class="btn btn-sm btn-danger" onclick="deleteVillage(${v.id})">删除</button>
+            </td>
+          </tr>
+        `).join('');
+      } catch (e) {
+        tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">加载失败</td></tr>';
+      }
+    }
+
+    function openVillageModal() {
+      document.getElementById('editVillageId').value = '';
+      document.getElementById('villageName').value = '';
+      document.getElementById('villageLeader').value = '';
+      document.getElementById('villagePhone').value = '';
+      document.getElementById('villageModalTitle').textContent = '添加村庄';
+      document.getElementById('villageModal').style.display = '';
+    }
+
+    async function editVillage(id) {
+      try {
+        const villages = await App.settings.villages.list();
+        const village = villages.find(v => v.id === id);
+        if (!village) return;
+        document.getElementById('editVillageId').value = village.id;
+        document.getElementById('villageName').value = village.name;
+        document.getElementById('villageLeader').value = village.leader || '';
+        document.getElementById('villagePhone').value = village.contact_phone || '';
+        document.getElementById('villageModalTitle').textContent = '编辑村庄';
+        document.getElementById('villageModal').style.display = '';
+      } catch (e) {
+        App.showToast('加载村庄信息失败', 'error');
+      }
+    }
+
+    function closeVillageModal() {
+      document.getElementById('villageModal').style.display = 'none';
+    }
+
+    async function submitVillage() {
+      const editId = document.getElementById('editVillageId').value;
+      const name = document.getElementById('villageName').value.trim();
+      const leader = document.getElementById('villageLeader').value.trim();
+      const phone = document.getElementById('villagePhone').value.trim();
+
+      if (!name) { App.showToast('请输入村庄名称', 'warning'); return; }
+
+      try {
+        if (editId) {
+          await App.settings.villages.update(editId, { name, leader, contact_phone: phone });
+          App.showToast('村庄更新成功', 'success');
+        } else {
+          await App.settings.villages.create({ name, leader, contact_phone: phone });
+          App.showToast('村庄创建成功', 'success');
+        }
+        closeVillageModal();
+        loadVillages();
+        App.clearCache();
+      } catch (e) {
+        App.showToast(e.message || '操作失败', 'error');
+      }
+    }
+
+    async function deleteVillage(id) {
+      const confirmed = await App.showConfirm('确定删除该村庄吗？');
+      if (!confirmed) return;
+      try {
+        await App.settings.villages.delete(id);
+        App.showToast('村庄已删除', 'success');
+        loadVillages();
+        App.clearCache();
+      } catch (e) {
+        App.showToast(e.message || '删除失败', 'error');
+      }
+    }
+
+    // 初始加载
+    loadUsers();
+  </script>
+</body>
+</html>

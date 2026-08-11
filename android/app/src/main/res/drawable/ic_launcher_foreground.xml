@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 应用图标前景 - 任务清单图标 -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- 背景圆 -->
+    <path
+        android:pathData="M54,30 A24,24 0 1,1 53.99,30"
+        android:fillColor="#FFFFFF"
+        android:fillAlpha="0.2" />
+    <!-- 勾选标记 -->
+    <path
+        android:pathData="M42,54 L50,62 L66,46"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="4"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:fillColor="@android:color/transparent" />
+    <!-- 横线1 -->
+    <path
+        android:pathData="M72,48 L88,48"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="3"
+        android:strokeLineCap="round"
+        android:fillColor="@android:color/transparent" />
+    <!-- 横线2 -->
+    <path
+        android:pathData="M72,58 L84,58"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="3"
+        android:strokeLineCap="round"
+        android:fillColor="@android:color/transparent" />
+    <!-- 横线3 -->
+    <path
+        android:pathData="M72,68 L80,68"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="3"
+        android:strokeLineCap="round"
+        android:fillColor="@android:color/transparent" />
+</vector>
