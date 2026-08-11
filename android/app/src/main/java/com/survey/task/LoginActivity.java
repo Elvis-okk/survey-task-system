@@ -136,13 +136,16 @@ public class LoginActivity extends AppCompatActivity {
         // 保存服务器地址（如果勾选了记住）
         saveServerUrl(serverUrl, username);
 
+        // 创建final副本供lambda使用
+        final String finalServerUrl = serverUrl;
+
         // 显示加载状态
         showLoading(true);
 
         // 在后台线程执行登录请求
         new Thread(() -> {
             try {
-                String token = loginRequest(serverUrl, username, password);
+                String token = loginRequest(finalServerUrl, username, password);
                 if (token != null) {
                     // 登录成功，保存token
                     sharedPreferences.edit()
@@ -152,7 +155,7 @@ public class LoginActivity extends AppCompatActivity {
                     // 在主线程跳转到主页
                     runOnUiThread(() -> {
                         showLoading(false);
-                        navigateToMain(serverUrl, token);
+                        navigateToMain(finalServerUrl, token);
                     });
                 } else {
                     // 登录失败
