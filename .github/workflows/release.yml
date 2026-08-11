@@ -54,14 +54,20 @@ jobs:
         with:
           java-version: '17'
           distribution: 'temurin'
-      - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v4
-      - name: Build APK
+      - name: Generate Gradle Wrapper
         working-directory: android
         run: |
-          gradle wrapper --gradle-version 7.5.1 --no-daemon
+          GRADLE_DIR=$RUNNER_TEMP/gradle-7.5.1
+          mkdir -p $GRADLE_DIR
+          cd $GRADLE_DIR
+          wget -q https://services.gradle.org/distributions/gradle-7.5.1-bin.zip
+          unzip -q gradle-7.5.1-bin.zip
+          cd $GITHUB_WORKSPACE/android
+          $GRADLE_DIR/gradle-7.5.1/bin/gradle wrapper --gradle-version 7.5.1 --no-daemon
           chmod +x gradlew
-          ./gradlew assembleRelease --no-daemon
+      - name: Build APK
+        working-directory: android
+        run: ./gradlew assembleRelease --no-daemon
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
