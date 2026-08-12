@@ -124,9 +124,8 @@
     </div>
 
     <!-- 查勘状态更新弹窗 -->
-    <div id="surveyModal" class="modal" style="display:none">
-      <div class="modal-overlay" onclick="closeSurveyModal()"></div>
-      <div class="modal-content">
+    <div id="surveyModal" class="modal-overlay" style="display:none" onclick="if(event.target===this)closeSurveyModal()">
+      <div class="modal">
         <div class="modal-header">
           <h3>更新查勘状态</h3>
           <button class="modal-close" onclick="closeSurveyModal()">&times;</button>
@@ -152,9 +151,8 @@
     </div>
 
     <!-- 处理状态更新弹窗 -->
-    <div id="processModal" class="modal" style="display:none">
-      <div class="modal-overlay" onclick="closeProcessModal()"></div>
-      <div class="modal-content">
+    <div id="processModal" class="modal-overlay" style="display:none" onclick="if(event.target===this)closeProcessModal()">
+      <div class="modal">
         <div class="modal-header">
           <h3>更新处理状态</h3>
           <button class="modal-close" onclick="closeProcessModal()">&times;</button>
@@ -182,9 +180,8 @@
     </div>
 
     <!-- 重新指派弹窗 -->
-    <div id="reassignModal" class="modal" style="display:none">
-      <div class="modal-overlay" onclick="closeReassignModal()"></div>
-      <div class="modal-content">
+    <div id="reassignModal" class="modal-overlay" style="display:none" onclick="if(event.target===this)closeReassignModal()">
+      <div class="modal">
         <div class="modal-header">
           <h3>重新指派</h3>
           <button class="modal-close" onclick="closeReassignModal()">&times;</button>
@@ -205,9 +202,8 @@
     </div>
 
     <!-- 修改任务弹窗 -->
-    <div id="editModal" class="modal" style="display:none">
-      <div class="modal-overlay" onclick="closeEditModal()"></div>
-      <div class="modal-content" style="max-width:560px">
+    <div id="editModal" class="modal-overlay" style="display:none" onclick="if(event.target===this)closeEditModal()">
+      <div class="modal" style="max-width:560px">
         <div class="modal-header">
           <h3>修改任务</h3>
           <button class="modal-close" onclick="closeEditModal()">&times;</button>
@@ -303,7 +299,7 @@
             </div>
             <div class="status-badges">
               ${App.surveyStatusBadge(task.survey_status)}
-              ${App.processStatusBadge(task.process_status)}
+              ${task.survey_status === 'surveyed' ? App.processStatusBadge(task.process_status) : ''}
               ${App.taskTagBadge(task)}
             </div>
           </div>
@@ -314,7 +310,7 @@
             </div>
             <div class="detail-row">
               <span class="detail-label">详细地址</span>
-              <span class="detail-value">${escapeHtml(task.address || '未填写')}</span>
+              <span class="detail-value">${task.address ? `<a href="javascript:openMap('${escapeHtml(task.address)}')" style="color:var(--primary);text-decoration:none">${escapeHtml(task.address)} 📍</a>` : '未填写'}</span>
             </div>
             <div class="detail-row">
               <span class="detail-label">发布时间</span>
@@ -407,13 +403,13 @@
         html += '<button class="btn btn-outline" onclick="openEditModal()">修改任务</button>';
       }
 
-      // 有处理任务权限：更新查勘状态（不再限制只有not_surveyed才能更新）
+      // 有处理任务权限：更新查勘状态
       if (App.hasPermission(currentUser, 'can_process')) {
         html += '<button class="btn btn-primary" onclick="openSurveyModal()">更新查勘状态</button>';
       }
 
-      // 有修改任务权限：更新处理状态（不再限制只有surveyed才能更新）
-      if (App.hasPermission(currentUser, 'can_edit')) {
+      // 只有已查勘状态才显示处理状态按钮
+      if (task.survey_status === 'surveyed' && App.hasPermission(currentUser, 'can_edit')) {
         html += '<button class="btn btn-warning" onclick="openProcessModal()">更新处理状态</button>';
       }
 
@@ -449,7 +445,7 @@
 
       try {
         await App.tasks.updateSurvey(taskId, { survey_status: status, survey_remark: remark });
-        App.showToast('查勘状态更新成功', 'success');
+        App.showToast(status === 'surveyed' ? '已标记为已查勘，处理状态自动设为待处理' : '查勘状态更新成功', 'success');
         closeSurveyModal();
         loadTask();
       } catch (e) {
@@ -615,6 +611,17 @@
         btn.disabled = false;
         btn.textContent = '保存修改';
       }
+    }
+
+    // 打开地图导航
+    function openMap(address) {
+      if (!address) return;
+      // 尝试使用高德地图Web API（手机端会自动唤起App）
+      const gaodeUrl = `https://uri.amap.com/search?keyword=${encodeURIComponent(address)}&src=mypage&coordinate=gaode&callnative=1`;
+      // 百度地图Web URL（备用）
+      const baiduUrl = `https://api.map.baidu.com/geocoder?address=${encodeURIComponent(address)}&output=html`;
+      // 优先尝试高德地图（callnative=1会尝试唤起App）
+      window.open(gaodeUrl, '_blank');
     }
 
     // 加载

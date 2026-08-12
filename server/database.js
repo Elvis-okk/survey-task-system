@@ -148,7 +148,7 @@ async function initDatabase() {
       purchase_info TEXT DEFAULT '',
       contact_person TEXT DEFAULT '',
       survey_status TEXT DEFAULT 'not_surveyed' CHECK(survey_status IN ('not_surveyed', 'surveyed')),
-      process_status TEXT DEFAULT 'pending' CHECK(process_status IN ('pending', 'resurvey', 'missing_docs', 'submitted')),
+      process_status TEXT DEFAULT '' CHECK(process_status IN ('', 'pending', 'resurvey', 'missing_docs', 'submitted')),
       created_by INTEGER NOT NULL,
       assigned_to INTEGER,
       created_at TEXT DEFAULT (datetime('now')),
@@ -349,6 +349,8 @@ function createQueries() {
 
     task: {
       getList: (filters) => {
+        // completed分类查归档任务，其他查未归档
+        const isCompletedCategory = filters.task_category === 'completed';
         let sql = `
           SELECT t.*, v.name as village_name,
                  u1.display_name as creator_name,
@@ -361,7 +363,7 @@ function createQueries() {
           LEFT JOIN users u2 ON t.assigned_to = u2.id
           LEFT JOIN tags tg ON t.tag = tg.name
           LEFT JOIN insurance_cases ic ON t.insurance_id = ic.id
-          WHERE t.is_archived = 0
+          WHERE t.is_archived = ${isCompletedCategory ? 1 : 0}
         `;
         const params = [];
         const conditions = [];
@@ -373,6 +375,13 @@ function createQueries() {
         if (filters.village_id) { conditions.push('t.village_id = ?'); params.push(filters.village_id); }
         if (filters.created_by) { conditions.push('t.created_by = ?'); params.push(filters.created_by); }
         if (filters.keyword) { conditions.push('(t.title LIKE ? OR t.address LIKE ?)'); params.push(`%${filters.keyword}%`, `%${filters.keyword}%`); }
+        // 任务分类过滤：pending_survey=待查勘, processing=处理中(已查勘且未提交), completed=已完成(已归档)
+        if (filters.task_category === 'pending_survey') {
+          conditions.push("t.survey_status = 'not_surveyed'");
+        } else if (filters.task_category === 'processing') {
+          conditions.push("t.survey_status = 'surveyed' AND (t.process_status IS NULL OR t.process_status = '' OR t.process_status != 'submitted')");
+        }
+        // completed分类已通过is_archived主条件处理
 
         if (conditions.length > 0) sql += ' AND ' + conditions.join(' AND ');
         sql += ' ORDER BY t.created_at DESC';
@@ -387,7 +396,8 @@ function createQueries() {
       },
 
       getCount: (filters) => {
-        let sql = 'SELECT COUNT(*) as total FROM tasks WHERE is_archived = 0';
+        const isCompletedCategory = filters.task_category === 'completed';
+        let sql = `SELECT COUNT(*) as total FROM tasks WHERE is_archived = ${isCompletedCategory ? 1 : 0}`;
         const params = [];
         const conditions = [];
 
@@ -398,6 +408,13 @@ function createQueries() {
         if (filters.village_id) { conditions.push('village_id = ?'); params.push(filters.village_id); }
         if (filters.created_by) { conditions.push('created_by = ?'); params.push(filters.created_by); }
         if (filters.keyword) { conditions.push('(title LIKE ? OR address LIKE ?)'); params.push(`%${filters.keyword}%`, `%${filters.keyword}%`); }
+        // 任务分类过滤
+        if (filters.task_category === 'pending_survey') {
+          conditions.push("survey_status = 'not_surveyed'");
+        } else if (filters.task_category === 'processing') {
+          conditions.push("survey_status = 'surveyed' AND (process_status IS NULL OR process_status = '' OR process_status != 'submitted')");
+        }
+        // completed分类已通过is_archived主条件处理
 
         if (conditions.length > 0) sql += ' AND ' + conditions.join(' AND ');
         return db.prepare(sql).get(...params).total;
@@ -420,7 +437,7 @@ function createQueries() {
 
       create: (...params) => db.prepare(`
         INSERT INTO tasks (title, publish_time, tag, village_id, address, contact_person, contact_phone, purchase_info, remark, insurance_id, survey_status, process_status, created_by, assigned_to)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'not_surveyed', 'pending', ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'not_surveyed', '', ?, ?)
       `).run(...params),
 
       update: (...params) => db.prepare(`
@@ -477,18 +494,24 @@ function createQueries() {
         return db.prepare(sql).get(...params).total;
       },
 
-      getStats: () => db.prepare(`
-        SELECT
-          COUNT(*) as total,
-          COALESCE(SUM(CASE WHEN survey_status = 'not_surveyed' THEN 1 ELSE 0 END), 0) as not_surveyed,
-          COALESCE(SUM(CASE WHEN survey_status = 'surveyed' THEN 1 ELSE 0 END), 0) as surveyed,
-          COALESCE(SUM(CASE WHEN process_status = 'pending' THEN 1 ELSE 0 END), 0) as pending,
-          COALESCE(SUM(CASE WHEN process_status = 'resurvey' THEN 1 ELSE 0 END), 0) as resurvey,
-          COALESCE(SUM(CASE WHEN process_status = 'missing_docs' THEN 1 ELSE 0 END), 0) as missing_docs,
-          COALESCE(SUM(CASE WHEN process_status = 'submitted' THEN 1 ELSE 0 END), 0) as submitted,
-          COALESCE(SUM(CASE WHEN is_archived = 1 THEN 1 ELSE 0 END), 0) as archived
-        FROM tasks
-      `).get()
+      getStats: (userId) => {
+        const whereClause = userId ? `WHERE (assigned_to = ? OR created_by = ?)` : '';
+        const params = userId ? [userId, userId] : [];
+        const stmt = db.prepare(`
+          SELECT
+            COUNT(*) as total,
+            COALESCE(SUM(CASE WHEN survey_status = 'not_surveyed' THEN 1 ELSE 0 END), 0) as not_surveyed,
+            COALESCE(SUM(CASE WHEN survey_status = 'surveyed' THEN 1 ELSE 0 END), 0) as surveyed,
+            COALESCE(SUM(CASE WHEN process_status = 'pending' AND survey_status = 'surveyed' THEN 1 ELSE 0 END), 0) as pending,
+            COALESCE(SUM(CASE WHEN process_status = 'resurvey' THEN 1 ELSE 0 END), 0) as resurvey,
+            COALESCE(SUM(CASE WHEN process_status = 'missing_docs' THEN 1 ELSE 0 END), 0) as missing_docs,
+            COALESCE(SUM(CASE WHEN process_status = 'submitted' THEN 1 ELSE 0 END), 0) as submitted,
+            COALESCE(SUM(CASE WHEN is_archived = 1 THEN 1 ELSE 0 END), 0) as archived
+          FROM tasks
+          ${whereClause}
+        `);
+        return stmt.get(...params);
+      }
     },
 
     log: {

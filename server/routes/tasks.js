@@ -19,7 +19,8 @@ function broadcastTaskChange(io, event, data) {
 router.get('/stats', requireAuth, (req, res) => {
   try {
     const { taskQueries } = getQueries();
-    const stats = taskQueries.getStats();
+    const userId = req.query.user_id ? parseInt(req.query.user_id) : null;
+    const stats = taskQueries.getStats(userId);
     res.json({ code: 0, data: stats, message: '' });
   } catch (err) {
     console.error('获取统计数据错误:', err);
@@ -71,6 +72,7 @@ router.get('/', requireAuth, (req, res) => {
       village_id: req.query.village_id,
       created_by: req.query.created_by,
       keyword: req.query.keyword,
+      task_category: req.query.task_category,
       page: req.query.page || 1,
       limit: req.query.limit || req.query.pageSize || 20
     };
@@ -224,8 +226,8 @@ router.put('/:id/survey', requireAuth, requirePermission('can_process'), (req, r
     }
 
     const oldStatus = task.survey_status;
-    // 标记已查勘后自动设置 process_status = 'pending'
-    const processStatus = survey_status === 'surveyed' ? 'pending' : task.process_status;
+    // 标记已查勘后自动设置 process_status = 'pending'，未查勘时清空处理状态
+    const processStatus = survey_status === 'surveyed' ? 'pending' : '';
 
     taskQueries.updateSurveyStatus(survey_status, processStatus, survey_remark || '', req.params.id);
 
@@ -248,6 +250,11 @@ router.put('/:id/process', requireAuth, requirePermission('can_edit'), (req, res
     const task = taskQueries.getById(req.params.id);
     if (!task) {
       return res.json({ code: 404, data: null, message: '任务不存在' });
+    }
+
+    // 只有已查勘的任务才能更新处理状态
+    if (task.survey_status !== 'surveyed') {
+      return res.json({ code: 400, data: null, message: '请先标记为已查勘再更新处理状态' });
     }
 
     const { process_status, process_remark } = req.body;

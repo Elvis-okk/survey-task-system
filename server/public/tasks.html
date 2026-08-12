@@ -5,6 +5,64 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>任务列表 - 查勘任务管理系统</title>
   <link rel="stylesheet" href="css/style.css">
+  <style>
+    .tab-bar {
+      display: flex;
+      gap: 0;
+      background: var(--bg-white);
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--border);
+      padding: 4px;
+      margin-bottom: 16px;
+      box-shadow: var(--shadow-sm);
+    }
+    .tab-item {
+      flex: 1;
+      text-align: center;
+      padding: 10px 8px;
+      border-radius: var(--radius);
+      font-size: 0.875rem;
+      font-weight: 500;
+      color: var(--text-secondary);
+      cursor: pointer;
+      transition: all var(--transition);
+      border: none;
+      background: transparent;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+    }
+    .tab-item:hover {
+      color: var(--primary);
+      background: var(--primary-bg);
+    }
+    .tab-item.active {
+      background: var(--primary);
+      color: white;
+      box-shadow: var(--shadow-sm);
+    }
+    .tab-item .tab-count {
+      display: inline-block;
+      min-width: 18px;
+      height: 18px;
+      line-height: 18px;
+      font-size: 11px;
+      font-weight: 600;
+      border-radius: 9px;
+      background: rgba(255,255,255,0.3);
+      margin-left: 4px;
+      padding: 0 5px;
+    }
+    .tab-item:not(.active) .tab-count {
+      background: var(--border-light);
+      color: var(--text-muted);
+    }
+    .filter-toggle-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+  </style>
 </head>
 <body>
   <div id="topNav"></div>
@@ -19,27 +77,24 @@
       </div>
     </div>
 
+    <!-- Tab分类 -->
+    <div class="tab-bar">
+      <button class="tab-item active" data-tab="pending_survey" onclick="switchTab('pending_survey')">
+        待查勘<span class="tab-count" id="countPendingSurvey">0</span>
+      </button>
+      <button class="tab-item" data-tab="processing" onclick="switchTab('processing')">
+        处理中<span class="tab-count" id="countProcessing">0</span>
+      </button>
+      <button class="tab-item" data-tab="completed" onclick="switchTab('completed')">
+        已完成<span class="tab-count" id="countCompleted">0</span>
+      </button>
+    </div>
+
     <!-- 筛选栏 -->
     <div class="card filter-card">
       <div class="filter-bar">
         <div class="filter-item">
           <input type="text" id="searchInput" class="form-control" placeholder="搜索任务标题...">
-        </div>
-        <div class="filter-item">
-          <select id="filterSurvey" class="form-control">
-            <option value="">全部查勘状态</option>
-            <option value="not_surveyed">待查勘</option>
-            <option value="surveyed">已查勘</option>
-          </select>
-        </div>
-        <div class="filter-item">
-          <select id="filterProcess" class="form-control">
-            <option value="">全部处理状态</option>
-            <option value="pending">待处理</option>
-            <option value="resurvey">需复查</option>
-            <option value="missing_docs">缺资料</option>
-            <option value="submitted">已提交</option>
-          </select>
         </div>
         <div class="filter-item">
           <select id="filterVillage" class="form-control">
@@ -80,11 +135,22 @@
 
     // 任务过滤状态
     let showMyTasks = true;
+    let currentTab = 'pending_survey';
 
     function toggleTaskFilter(myTasks) {
       showMyTasks = myTasks;
       document.getElementById('btnMyTasks').className = `btn btn-sm ${myTasks ? 'btn-primary' : 'btn-secondary'}`;
       document.getElementById('btnAllTasks').className = `btn btn-sm ${myTasks ? 'btn-secondary' : 'btn-primary'}`;
+      currentPage = 1;
+      loadTasks();
+      loadTabCounts();
+    }
+
+    function switchTab(tab) {
+      currentTab = tab;
+      document.querySelectorAll('.tab-item').forEach(el => {
+        el.classList.toggle('active', el.dataset.tab === tab);
+      });
       currentPage = 1;
       loadTasks();
     }
@@ -95,14 +161,14 @@
     let totalPages = 1;
     let searchTimer = null;
 
-    // 从URL参数初始化筛选
-    function initFiltersFromUrl() {
+    // 从URL参数初始化
+    function initFromUrl() {
       const params = new URLSearchParams(location.search);
-      if (params.get('survey_status')) {
-        document.getElementById('filterSurvey').value = params.get('survey_status');
-      }
-      if (params.get('process_status')) {
-        document.getElementById('filterProcess').value = params.get('process_status');
+      if (params.get('tab')) {
+        currentTab = params.get('tab');
+        document.querySelectorAll('.tab-item').forEach(el => {
+          el.classList.toggle('active', el.dataset.tab === currentTab);
+        });
       }
     }
 
@@ -134,21 +200,46 @@
       }
     }
 
+    // 加载Tab计数
+    async function loadTabCounts() {
+      try {
+        const baseParams = {};
+        if (showMyTasks) {
+          if (role === 'surveyor') {
+            baseParams.assigned_to = currentUser.id;
+          } else if (role === 'publisher') {
+            baseParams.created_by = currentUser.id;
+          } else if (role === 'admin') {
+            baseParams.assigned_to = currentUser.id;
+          }
+        }
+
+        // 待查勘数
+        const pendingData = await App.tasks.list({ ...baseParams, task_category: 'pending_survey', pageSize: 1 });
+        document.getElementById('countPendingSurvey').textContent = pendingData.total || 0;
+
+        // 处理中数
+        const processData = await App.tasks.list({ ...baseParams, task_category: 'processing', pageSize: 1 });
+        document.getElementById('countProcessing').textContent = processData.total || 0;
+
+        // 已完成数
+        const completedData = await App.tasks.list({ ...baseParams, task_category: 'completed', pageSize: 1 });
+        document.getElementById('countCompleted').textContent = completedData.total || 0;
+      } catch (e) {
+        console.error('加载计数失败:', e);
+      }
+    }
+
     // 获取筛选参数
     function getFilterParams() {
       const params = {
         page: currentPage,
-        pageSize
+        pageSize,
+        task_category: currentTab
       };
 
       const search = document.getElementById('searchInput').value.trim();
       if (search) params.keyword = search;
-
-      const surveyStatus = document.getElementById('filterSurvey').value;
-      if (surveyStatus) params.survey_status = surveyStatus;
-
-      const processStatus = document.getElementById('filterProcess').value;
-      if (processStatus) params.process_status = processStatus;
 
       const villageId = document.getElementById('filterVillage').value;
       if (villageId) params.village_id = parseInt(villageId);
@@ -166,7 +257,6 @@
           params.assigned_to = currentUser.id;
         }
       }
-      // showMyTasks=false 时不加过滤，显示所有任务
 
       return params;
     }
@@ -184,18 +274,25 @@
         totalPages = Math.ceil(total / pageSize) || 1;
 
         if (tasks.length === 0) {
+          const emptyMsg = {
+            'pending_survey': '暂无待查勘任务',
+            'processing': '暂无处理中任务',
+            'completed': '暂无已完成任务'
+          }[currentTab] || '暂无任务数据';
           container.innerHTML = `
             <div class="empty-state">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="48" height="48">
                 <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
               </svg>
-              <p>暂无任务数据</p>
+              <p>${emptyMsg}</p>
             </div>`;
           document.getElementById('pagination').innerHTML = '';
           return;
         }
 
-        container.innerHTML = tasks.map(task => `
+        container.innerHTML = tasks.map(task => {
+          const showProcess = task.survey_status === 'surveyed' && task.process_status;
+          return `
           <div class="task-card" onclick="location.href='task-detail.html?id=${task.id}'">
             <div class="task-card-header">
               <span class="task-card-title">${escapeHtml(task.title)}</span>
@@ -211,10 +308,10 @@
                             ${App.taskTagBadge(task)}
             </div>
             <div class="task-card-footer">
-              ${App.processStatusBadge(task.process_status)}
+              ${showProcess ? App.processStatusBadge(task.process_status) : ''}
             </div>
           </div>
-        `).join('');
+        `}).join('');
 
         renderPagination(total);
       } catch (e) {
@@ -261,8 +358,6 @@
 
     function resetFilters() {
       document.getElementById('searchInput').value = '';
-      document.getElementById('filterSurvey').value = '';
-      document.getElementById('filterProcess').value = '';
       document.getElementById('filterVillage').value = '';
       document.getElementById('filterTag').value = '';
       currentPage = 1;
@@ -275,15 +370,14 @@
       searchTimer = setTimeout(() => { currentPage = 1; loadTasks(); }, 300);
     });
 
-    document.getElementById('filterSurvey').addEventListener('change', () => { currentPage = 1; loadTasks(); });
-    document.getElementById('filterProcess').addEventListener('change', () => { currentPage = 1; loadTasks(); });
     document.getElementById('filterVillage').addEventListener('change', () => { currentPage = 1; loadTasks(); });
     document.getElementById('filterTag').addEventListener('change', () => { currentPage = 1; loadTasks(); });
 
     // 初始化
-    initFiltersFromUrl();
+    initFromUrl();
     loadFilterOptions();
     loadTasks();
+    loadTabCounts();
   </script>
 </body>
 </html>

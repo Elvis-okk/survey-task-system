@@ -18,25 +18,16 @@
 
     <!-- 统计卡片 -->
     <div class="stats-grid" id="statsGrid">
-      <div class="stat-card" onclick="location.href='tasks.html'">
-        <div class="stat-icon" style="background:rgba(79,70,229,0.1);color:#4F46E5">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
-        </div>
-        <div class="stat-info">
-          <span class="stat-value" id="statTotal">-</span>
-          <span class="stat-label">全部任务</span>
-        </div>
-      </div>
-      <div class="stat-card" onclick="location.href='tasks.html?survey_status=not_surveyed'">
+      <div class="stat-card" onclick="location.href='tasks.html?tab=pending_survey'">
         <div class="stat-icon" style="background:rgba(245,158,11,0.1);color:#F59E0B">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
         </div>
         <div class="stat-info">
-          <span class="stat-value" id="statPending">-</span>
+          <span class="stat-value" id="statPendingSurvey">-</span>
           <span class="stat-label">待查勘</span>
         </div>
       </div>
-      <div class="stat-card" onclick="location.href='tasks.html?process_status=pending'">
+      <div class="stat-card" onclick="location.href='tasks.html?tab=processing'">
         <div class="stat-icon" style="background:rgba(79,70,229,0.1);color:#4F46E5">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v4m0 12v4m-7.07-15.07l2.83 2.83m8.48 8.48l2.83 2.83M2 12h4m12 0h4M4.93 19.07l2.83-2.83m8.48-8.48l2.83-2.83"/></svg>
         </div>
@@ -45,13 +36,22 @@
           <span class="stat-label">处理中</span>
         </div>
       </div>
-      <div class="stat-card" onclick="location.href='completed.html'">
+      <div class="stat-card" onclick="location.href='tasks.html?tab=completed'">
         <div class="stat-icon" style="background:rgba(16,185,129,0.1);color:#10B981">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
         </div>
         <div class="stat-info">
           <span class="stat-value" id="statCompleted">-</span>
           <span class="stat-label">已完成</span>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon" style="background:rgba(107,114,128,0.1);color:#6B7280">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+        </div>
+        <div class="stat-info">
+          <span class="stat-value" id="statTotal">-</span>
+          <span class="stat-label">全部任务</span>
         </div>
       </div>
     </div>
@@ -132,20 +132,22 @@
       document.getElementById('btnMyTasks').className = `btn btn-sm ${myTasks ? 'btn-primary' : 'btn-secondary'}`;
       document.getElementById('btnAllTasks').className = `btn btn-sm ${myTasks ? 'btn-secondary' : 'btn-primary'}`;
       loadRecentTasks();
+      loadStats();
     }
 
     // 加载统计数据
     async function loadStats() {
       try {
-        const stats = await App.tasks.stats();
+        const userId = showMyTasks ? currentUser.id : null;
+        const stats = await App.tasks.stats(userId);
         document.getElementById('statTotal').textContent = stats.total || 0;
-        document.getElementById('statPending').textContent = stats.not_surveyed || 0;
-        document.getElementById('statProcessing').textContent = (stats.pending || 0) + (stats.resurvey || 0);
+        document.getElementById('statPendingSurvey').textContent = stats.not_surveyed || 0;
+        document.getElementById('statProcessing').textContent = (stats.pending || 0) + (stats.resurvey || 0) + (stats.missing_docs || 0);
         document.getElementById('statCompleted').textContent = stats.archived || 0;
       } catch (e) {
         console.error('加载统计失败:', e);
         document.getElementById('statTotal').textContent = '0';
-        document.getElementById('statPending').textContent = '0';
+        document.getElementById('statPendingSurvey').textContent = '0';
         document.getElementById('statProcessing').textContent = '0';
         document.getElementById('statCompleted').textContent = '0';
       }
@@ -198,7 +200,7 @@
                             ${App.taskTagBadge(task)}
             </div>
             <div class="task-card-footer">
-              ${App.processStatusBadge(task.process_status)}
+              ${task.survey_status === 'surveyed' && task.process_status ? App.processStatusBadge(task.process_status) : ''}
             </div>
           </div>
         `).join('');

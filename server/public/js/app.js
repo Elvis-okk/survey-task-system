@@ -129,7 +129,12 @@ const App = {
       const query = new URLSearchParams(params).toString();
       return App.get(`/api/tasks/completed${query ? '?' + query : ''}`);
     },
-    stats() { return App.get('/api/tasks/stats'); }
+    stats(userId) {
+      const params = {};
+      if (userId) params.user_id = userId;
+      const query = new URLSearchParams(params).toString();
+      return App.get(`/api/tasks/stats${query ? '?' + query : ''}`);
+    }
   },
 
   // ========== 设置API ==========
@@ -194,6 +199,7 @@ const App = {
   },
 
   processStatusBadge(status) {
+    if (!status) return '';
     const map = {
       'pending': { text: '待处理', cls: 'process-pending' },
       'resurvey': { text: '需复勘', cls: 'process-resurvey' },
