@@ -252,6 +252,13 @@ public class MainActivity extends AppCompatActivity {
                 return true;
             }
             
+            // 处理geo:链接 - 打开地图应用
+            if ("geo".equals(scheme)) {
+                Intent mapIntent = new Intent(Intent.ACTION_VIEW, request.getUrl());
+                startActivity(mapIntent);
+                return true;
+            }
+            
             // 同域名页面在WebView内加载（不调用view.loadUrl，避免双重加载）
             if (url.startsWith(serverUrl)) {
                 return false;

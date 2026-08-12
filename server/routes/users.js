@@ -4,6 +4,29 @@ const bcrypt = require('bcryptjs');
 const { getQueries } = require('../database');
 const { requireAuth, requireRole, requirePermission } = require('../middleware');
 
+// GET /api/users/surveyors - 获取查勘员列表（仅需登录，用于发布任务时选择查勘员）
+router.get('/surveyors', requireAuth, (req, res) => {
+  try {
+    const { userQueries } = getQueries();
+    const allUsers = userQueries.getAll();
+    // 筛选有处理权限的活跃用户（查勘员或管理员）
+    const surveyors = allUsers
+      .filter(u => (u.can_process || u.role === 'surveyor') && u.is_active !== 0)
+      .map(u => ({
+        id: u.id,
+        username: u.username,
+        display_name: u.display_name,
+        role: u.role,
+        village_id: u.village_id,
+        village_name: u.village_name
+      }));
+    res.json({ code: 0, data: surveyors, message: '' });
+  } catch (err) {
+    console.error('获取查勘员列表错误:', err);
+    res.json({ code: 500, data: null, message: '服务器错误' });
+  }
+});
+
 // GET /api/users - 获取用户列表（管理员）
 router.get('/', requireAuth, requireRole('admin'), (req, res) => {
   try {

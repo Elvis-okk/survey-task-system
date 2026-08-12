@@ -106,22 +106,22 @@
       setTimeout(() => location.href = 'dashboard.html', 1500);
     }
 
-    // 缓存村庄和用户数据
+    // 缓存村庄和查勘员数据
     let cachedVillages = [];
-    let cachedUsers = [];
+    let cachedSurveyors = [];
 
     // 加载下拉选项
     async function loadOptions() {
       try {
-        const [tags, villages, users, insurances] = await Promise.all([
+        const [tags, villages, surveyors, insurances] = await Promise.all([
           App.loadTags(),
           App.loadVillages(),
-          App.loadUsers(),
+          App.loadSurveyors(),
           App.loadInsurances()
         ]);
 
         cachedVillages = villages;
-        cachedUsers = users;
+        cachedSurveyors = surveyors;
 
         // 标签
         const tagSelect = document.getElementById('tag');
@@ -132,21 +132,17 @@
           tagSelect.appendChild(opt);
         });
 
-        // 村庄
-        const villageSelect = document.getElementById('village');
-        villages.forEach(v => {
-          const opt = document.createElement('option');
-          opt.value = v.id;
-          opt.textContent = v.name;
-          villageSelect.appendChild(opt);
-        });
+        // 村庄（初始加载全部）
+        renderVillageOptions(villages);
 
         // 查勘员
         const assignedSelect = document.getElementById('assignedTo');
-        users.filter(u => (u.can_process || u.role === 'surveyor') && u.is_active !== 0).forEach(u => {
+        assignedSelect.innerHTML = '<option value="">不指派</option>';
+        surveyors.forEach(u => {
           const opt = document.createElement('option');
           opt.value = u.id;
-          opt.textContent = u.username + (u.display_name ? ` (${u.display_name})` : '');
+          opt.textContent = u.display_name || u.username;
+          if (u.village_name) opt.textContent += ` (${u.village_name})`;
           assignedSelect.appendChild(opt);
         });
 
@@ -164,17 +160,39 @@
       }
     }
 
-    // 查勘员选择变化时，自动设置所属村庄
+    // 渲染村庄下拉选项
+    function renderVillageOptions(villages) {
+      const villageSelect = document.getElementById('village');
+      const currentValue = villageSelect.value;
+      villageSelect.innerHTML = '<option value="">选择村庄</option>';
+      villages.forEach(v => {
+        const opt = document.createElement('option');
+        opt.value = v.id;
+        opt.textContent = v.name;
+        villageSelect.appendChild(opt);
+      });
+      // 恢复之前选中的值
+      if (currentValue) villageSelect.value = currentValue;
+    }
+
+    // 查勘员选择变化时，过滤村庄只显示该查勘员所属村，并自动选中
     document.getElementById('assignedTo').addEventListener('change', function() {
       const userId = parseInt(this.value);
       const villageSelect = document.getElementById('village');
       if (!userId) {
-        // 不指派时不清空村庄
+        // 不指派时，恢复显示全部村庄
+        renderVillageOptions(cachedVillages);
         return;
       }
-      const user = cachedUsers.find(u => u.id === userId);
-      if (user && user.village_id) {
-        villageSelect.value = String(user.village_id);
+      const surveyor = cachedSurveyors.find(u => u.id === userId);
+      if (surveyor && surveyor.village_id) {
+        // 只显示该查勘员所属村庄
+        const filteredVillages = cachedVillages.filter(v => v.id === surveyor.village_id);
+        renderVillageOptions(filteredVillages);
+        villageSelect.value = String(surveyor.village_id);
+      } else {
+        // 查勘员无村庄关联，恢复全部
+        renderVillageOptions(cachedVillages);
       }
     });
 

@@ -100,6 +100,7 @@ const App = {
   // ========== 用户API ==========
   users: {
     list() { return App.get('/api/users'); },
+    surveyors() { return App.get('/api/users/surveyors'); },
     create(data) { return App.post('/api/users', data); },
     update(id, data) { return App.put(`/api/users/${id}`, data); },
     delete(id) { return App.delete(`/api/users/${id}`); },
@@ -446,6 +447,7 @@ const App = {
   _cachedVillages: null,
   _cachedUsers: null,
   _cachedInsurances: null,
+  _cachedSurveyors: null,
 
   async loadTags() {
     if (this._cachedTags) return this._cachedTags;
@@ -495,11 +497,24 @@ const App = {
     }
   },
 
+  async loadSurveyors() {
+    if (this._cachedSurveyors) return this._cachedSurveyors;
+    try {
+      const data = await this.users.surveyors();
+      this._cachedSurveyors = data;
+      return data;
+    } catch (e) {
+      console.error('加载查勘员失败:', e);
+      return [];
+    }
+  },
+
   clearCache() {
     this._cachedTags = null;
     this._cachedVillages = null;
     this._cachedUsers = null;
     this._cachedInsurances = null;
+    this._cachedSurveyors = null;
   },
 
   // ========== 生成下拉选项 ==========
