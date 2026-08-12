@@ -65,6 +65,10 @@
           <input type="text" id="address" class="form-control" placeholder="请输入详细地址" maxlength="200">
         </div>
         <div class="form-group">
+          <label class="form-label">联系人</label>
+          <input type="text" id="contactPerson" class="form-control" placeholder="请输入联系人姓名" maxlength="50">
+        </div>
+        <div class="form-group">
           <label class="form-label">联系电话</label>
           <input type="tel" id="contactPhone" class="form-control" placeholder="请输入联系电话" maxlength="20">
         </div>
@@ -102,6 +106,10 @@
       setTimeout(() => location.href = 'dashboard.html', 1500);
     }
 
+    // 缓存村庄和用户数据
+    let cachedVillages = [];
+    let cachedUsers = [];
+
     // 加载下拉选项
     async function loadOptions() {
       try {
@@ -111,6 +119,9 @@
           App.loadUsers(),
           App.loadInsurances()
         ]);
+
+        cachedVillages = villages;
+        cachedUsers = users;
 
         // 标签
         const tagSelect = document.getElementById('tag');
@@ -153,6 +164,20 @@
       }
     }
 
+    // 村庄选择变化时，自动设置查勘员为该村负责人
+    document.getElementById('village').addEventListener('change', function() {
+      const villageId = parseInt(this.value);
+      const assignedSelect = document.getElementById('assignedTo');
+      if (!villageId) {
+        assignedSelect.value = '';
+        return;
+      }
+      const village = cachedVillages.find(v => v.id === villageId);
+      if (village && village.leader_id) {
+        assignedSelect.value = String(village.leader_id);
+      }
+    });
+
     // 设置默认发布时间为当前时间
     document.getElementById('publishTime').value = App.getNowDatetimeLocal();
 
@@ -165,6 +190,7 @@
       const publishTime = document.getElementById('publishTime').value;
       const assignedTo = document.getElementById('assignedTo').value;
       const address = document.getElementById('address').value.trim();
+      const contactPerson = document.getElementById('contactPerson').value.trim();
       const contactPhone = document.getElementById('contactPhone').value.trim();
       const remark = document.getElementById('remark').value.trim();
       const insuranceId = document.getElementById('insurance').value;
@@ -184,6 +210,7 @@
         const taskData = {
           village_id: parseInt(villageId),
           address,
+          contact_person: contactPerson,
           contact_phone: contactPhone,
           remark
         };

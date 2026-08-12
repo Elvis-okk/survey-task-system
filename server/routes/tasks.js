@@ -98,7 +98,7 @@ router.get('/', requireAuth, (req, res) => {
 // POST /api/tasks - 发布新任务
 router.post('/', requireAuth, requirePermission('can_publish'), (req, res) => {
   try {
-    const { title, publish_time, tag, village_id, address, contact_phone, purchase_info, remark, insurance_id, assigned_to } = req.body;
+    const { title, publish_time, tag, village_id, address, contact_person, contact_phone, purchase_info, remark, insurance_id, assigned_to } = req.body;
 
     if (!publish_time) {
       return res.json({ code: 400, data: null, message: '发布时间不能为空' });
@@ -121,6 +121,7 @@ router.post('/', requireAuth, requirePermission('can_publish'), (req, res) => {
       tag || '',
       village_id || null,
       address || '',
+      contact_person || '',
       contact_phone || '',
       purchase_info || '',
       remark || '',
@@ -174,7 +175,7 @@ router.put('/:id', requireAuth, (req, res) => {
       return res.json({ code: 403, data: null, message: '只能修改自己发布的任务' });
     }
 
-    const { title, publish_time, tag, village_id, address, contact_phone, purchase_info, remark, insurance_id } = req.body;
+    const { title, publish_time, tag, village_id, address, contact_person, contact_phone, purchase_info, remark, insurance_id, assigned_to } = req.body;
 
     taskQueries.update(
       title !== undefined ? title : task.title,
@@ -182,12 +183,18 @@ router.put('/:id', requireAuth, (req, res) => {
       tag !== undefined ? tag : task.tag,
       village_id !== undefined ? village_id : task.village_id,
       address !== undefined ? address : task.address,
+      contact_person !== undefined ? contact_person : task.contact_person,
       contact_phone !== undefined ? contact_phone : task.contact_phone,
       purchase_info !== undefined ? purchase_info : task.purchase_info,
       remark !== undefined ? remark : task.remark,
       insurance_id !== undefined ? insurance_id : task.insurance_id,
       req.params.id
     );
+
+    // 如果修改了指派人
+    if (assigned_to !== undefined && assigned_to !== task.assigned_to) {
+      taskQueries.reassign(assigned_to, req.params.id);
+    }
 
     // 记录日志
     logQueries.create(req.params.id, 'update', null, JSON.stringify(req.body), req.user.id);
