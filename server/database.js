@@ -383,7 +383,7 @@ function createQueries() {
         // completed分类已通过is_archived主条件处理
 
         if (conditions.length > 0) sql += ' AND ' + conditions.join(' AND ');
-        sql += ' ORDER BY t.created_at DESC';
+        sql += ' ORDER BY t.publish_time DESC';
 
         const page = parseInt(filters.page) || 1;
         const limit = parseInt(filters.limit) || 20;

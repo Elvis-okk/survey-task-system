@@ -348,11 +348,11 @@
           <div class="detail-card-body">
             <div class="detail-row">
               <span class="detail-label">创建人</span>
-              <span class="detail-value">${App.getUserName(task.created_by)}</span>
+              <span class="detail-value">${escapeHtml(task.creator_name || '未知')}</span>
             </div>
             <div class="detail-row">
               <span class="detail-label">指派查勘员</span>
-              <span class="detail-value">${task.assigned_to ? App.getUserName(task.assigned_to) : '未指派'}</span>
+              <span class="detail-value">${escapeHtml(task.assignee_name || '未指派')}</span>
             </div>
           </div>
         </div>
