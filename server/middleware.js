@@ -26,6 +26,8 @@ function requireRole(...roles) {
     if (!req.user) {
       return res.status(401).json({ code: 401, data: null, message: '未登录' });
     }
+    // admin角色始终有权限
+    if (req.user.role === 'admin') return next();
     if (!roles.includes(req.user.role)) {
       return res.status(403).json({ code: 403, data: null, message: '权限不足' });
     }
@@ -33,4 +35,19 @@ function requireRole(...roles) {
   };
 }
 
-module.exports = { requireAuth, requireRole, JWT_SECRET };
+// 权限检查中间件 - 检查具体权限点
+// permission: 'can_publish' | 'can_edit' | 'can_process'
+function requirePermission(permission) {
+  return (req, res, next) => {
+    if (!req.user) {
+      return res.status(401).json({ code: 401, data: null, message: '未登录' });
+    }
+    // admin角色始终有所有权限
+    if (req.user.role === 'admin') return next();
+    // 检查具体权限
+    if (req.user[permission]) return next();
+    return res.status(403).json({ code: 403, data: null, message: '权限不足' });
+  };
+}
+
+module.exports = { requireAuth, requireRole, requirePermission, JWT_SECRET };

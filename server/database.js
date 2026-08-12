@@ -203,7 +203,10 @@ async function initDatabase() {
     { table: 'tasks', column: 'process_remark', type: 'TEXT DEFAULT \'\'' },
     { table: 'tasks', column: 'insurance_id', type: 'INTEGER' },
     { table: 'villages', column: 'leader', type: 'TEXT DEFAULT \'\'' },
-    { table: 'villages', column: 'contact_phone', type: 'TEXT DEFAULT \'\'' }
+    { table: 'villages', column: 'contact_phone', type: 'TEXT DEFAULT \'\'' },
+    { table: 'users', column: 'can_publish', type: 'INTEGER DEFAULT 0' },
+    { table: 'users', column: 'can_edit', type: 'INTEGER DEFAULT 0' },
+    { table: 'users', column: 'can_process', type: 'INTEGER DEFAULT 0' }
   ];
   for (const col of columnsToAdd) {
     try {
@@ -220,8 +223,8 @@ async function initDatabase() {
 
     const hashedPassword = bcrypt.hashSync(adminPassword, 10);
     database.prepare(`
-      INSERT INTO users (username, password, display_name, role, is_active)
-      VALUES (?, ?, ?, ?, 1)
+      INSERT INTO users (username, password, display_name, role, is_active, can_publish, can_edit, can_process)
+      VALUES (?, ?, ?, ?, 1, 1, 1, 1)
     `).run('admin', hashedPassword, '系统管理员', 'admin');
   }
 
@@ -279,6 +282,7 @@ function createQueries() {
     user: {
       getAll: () => db.prepare(`
         SELECT u.id, u.username, u.display_name, u.role, u.village_id, u.created_at, u.updated_at, u.is_active,
+               u.can_publish, u.can_edit, u.can_process,
                v.name as village_name
         FROM users u
         LEFT JOIN villages v ON u.village_id = v.id
@@ -287,6 +291,7 @@ function createQueries() {
 
       getById: (id) => db.prepare(`
         SELECT u.id, u.username, u.display_name, u.role, u.village_id, u.created_at, u.updated_at, u.is_active,
+               u.can_publish, u.can_edit, u.can_process,
                v.name as village_name
         FROM users u
         LEFT JOIN villages v ON u.village_id = v.id
@@ -296,12 +301,22 @@ function createQueries() {
       getByUsername: (username) => db.prepare('SELECT * FROM users WHERE username = ?').get(username),
 
       create: (...params) => db.prepare(`
-        INSERT INTO users (username, password, display_name, role, village_id)
-        VALUES (?, ?, ?, ?, ?)
+        INSERT INTO users (username, password, display_name, role, village_id, can_publish, can_edit, can_process)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
       `).run(...params),
 
       update: (...params) => db.prepare(`
         UPDATE users SET display_name = ?, role = ?, village_id = ?, updated_at = datetime('now')
+        WHERE id = ?
+      `).run(...params),
+
+      updateWithUsername: (...params) => db.prepare(`
+        UPDATE users SET username = ?, display_name = ?, role = ?, village_id = ?, can_publish = ?, can_edit = ?, can_process = ?, updated_at = datetime('now')
+        WHERE id = ?
+      `).run(...params),
+
+      updatePermissions: (...params) => db.prepare(`
+        UPDATE users SET can_publish = ?, can_edit = ?, can_process = ?, updated_at = datetime('now')
         WHERE id = ?
       `).run(...params),
 
@@ -315,14 +330,18 @@ function createQueries() {
 
       updateRole: (...params) => db.prepare(`
         UPDATE users SET role = ?, updated_at = datetime('now') WHERE id = ?
-      `).run(...params)
+      `).run(...params),
+
+      delete: (id) => db.prepare('DELETE FROM users WHERE id = ?').run(id),
+
+      checkUsernameExists: (username, excludeId) => db.prepare('SELECT id FROM users WHERE username = ? AND id != ?').get(username, excludeId)
     },
 
     village: {
       getAll: () => db.prepare('SELECT v.*, u.display_name as leader_name FROM villages v LEFT JOIN users u ON v.leader_id = u.id ORDER BY v.created_at DESC').all(),
       getById: (id) => db.prepare('SELECT * FROM villages WHERE id = ?').get(id),
-      create: (...params) => db.prepare('INSERT INTO villages (name, leader, contact_phone) VALUES (?, ?, ?)').run(...params),
-      update: (...params) => db.prepare('UPDATE villages SET name = ?, leader = ?, contact_phone = ? WHERE id = ?').run(...params),
+      create: (...params) => db.prepare('INSERT INTO villages (name, leader_id, contact_phone) VALUES (?, ?, ?)').run(...params),
+      update: (...params) => db.prepare('UPDATE villages SET name = ?, leader_id = ?, contact_phone = ? WHERE id = ?').run(...params),
       delete: (id) => db.prepare('DELETE FROM villages WHERE id = ?').run(id)
     },
 

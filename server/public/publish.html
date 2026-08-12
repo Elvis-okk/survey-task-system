@@ -96,8 +96,8 @@
   <script>
     const currentUser = App.initPage();
 
-    // 权限检查：查勘员不能发布任务
-    if (currentUser.role === 'surveyor') {
+    // 权限检查：没有发布任务权限则跳转
+    if (!App.hasPermission(currentUser, 'can_publish')) {
       App.showToast('您没有发布任务的权限', 'error');
       setTimeout(() => location.href = 'dashboard.html', 1500);
     }
@@ -132,7 +132,7 @@
 
         // 查勘员
         const assignedSelect = document.getElementById('assignedTo');
-        users.filter(u => u.role === 'surveyor' && u.is_active !== 0).forEach(u => {
+        users.filter(u => (u.can_process || u.role === 'surveyor') && u.is_active !== 0).forEach(u => {
           const opt = document.createElement('option');
           opt.value = u.id;
           opt.textContent = u.username + (u.display_name ? ` (${u.display_name})` : '');

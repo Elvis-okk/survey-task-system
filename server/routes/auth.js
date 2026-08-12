@@ -30,7 +30,7 @@ router.post('/login', (req, res) => {
     }
 
     const token = jwt.sign(
-      { id: user.id, username: user.username, role: user.role, display_name: user.display_name },
+      { id: user.id, username: user.username, role: user.role, display_name: user.display_name, can_publish: user.can_publish, can_edit: user.can_edit, can_process: user.can_process },
       JWT_SECRET,
       { expiresIn: '7d' }
     );
@@ -44,7 +44,10 @@ router.post('/login', (req, res) => {
           username: user.username,
           display_name: user.display_name,
           role: user.role,
-          village_id: user.village_id
+          village_id: user.village_id,
+          can_publish: user.can_publish,
+          can_edit: user.can_edit,
+          can_process: user.can_process
         }
       },
       message: '登录成功'
@@ -77,7 +80,10 @@ router.get('/me', requireAuth, (req, res) => {
         role: user.role,
         village_id: user.village_id,
         village_name: user.village_name,
-        is_active: user.is_active
+        is_active: user.is_active,
+        can_publish: user.can_publish,
+        can_edit: user.can_edit,
+        can_process: user.can_process
       },
       message: ''
     });

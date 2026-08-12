@@ -90,7 +90,11 @@
     <!-- 最近任务 -->
     <div class="section-header">
       <h3>最近任务</h3>
-      <a href="tasks.html" class="link">查看全部</a>
+      <div style="display:flex;align-items:center;gap:8px">
+        <button class="btn btn-sm btn-primary" id="btnMyTasks" onclick="toggleTaskFilter(true)">我的任务</button>
+        <button class="btn btn-sm btn-secondary" id="btnAllTasks" onclick="toggleTaskFilter(false)">全部任务</button>
+        <a href="tasks.html" class="link">查看全部</a>
+      </div>
     </div>
     <div id="recentTasks" class="task-list">
       <div class="loading-spinner"></div>
@@ -112,12 +116,22 @@
 
     // 角色权限控制
     const role = currentUser.role;
-    if (role === 'surveyor') {
-      // 查勘员不能发布任务
+    // 发布任务权限：admin或有can_publish权限
+    if (!App.hasPermission(currentUser, 'can_publish')) {
       document.getElementById('actionPublish').style.display = 'none';
     }
     if (role === 'admin') {
       document.getElementById('actionAdmin').style.display = '';
+    }
+
+    // 任务过滤状态：默认显示当前用户任务
+    let showMyTasks = true;
+
+    function toggleTaskFilter(myTasks) {
+      showMyTasks = myTasks;
+      document.getElementById('btnMyTasks').className = `btn btn-sm ${myTasks ? 'btn-primary' : 'btn-secondary'}`;
+      document.getElementById('btnAllTasks').className = `btn btn-sm ${myTasks ? 'btn-secondary' : 'btn-primary'}`;
+      loadRecentTasks();
     }
 
     // 加载统计数据
@@ -142,12 +156,19 @@
       const container = document.getElementById('recentTasks');
       try {
         const params = { page: 1, pageSize: 5 };
-        // 非管理员只能看自己的任务
-        if (role === 'surveyor') {
-          params.assigned_to = currentUser.id;
-        } else if (role === 'publisher') {
-          params.created_by = currentUser.id;
+        // 根据过滤状态决定查询条件
+        if (showMyTasks) {
+          // 非管理员默认按角色过滤
+          if (role === 'surveyor') {
+            params.assigned_to = currentUser.id;
+          } else if (role === 'publisher') {
+            params.created_by = currentUser.id;
+          } else if (role === 'admin') {
+            // 管理员显示所有任务中与自己相关的
+            params.assigned_to = currentUser.id;
+          }
         }
+        // showMyTasks=false 时不加过滤，显示所有任务
 
         const result = await App.tasks.list(params);
         const tasks = result.tasks || [];

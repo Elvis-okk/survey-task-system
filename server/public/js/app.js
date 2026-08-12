@@ -103,6 +103,7 @@ const App = {
     create(data) { return App.post('/api/users', data); },
     update(id, data) { return App.put(`/api/users/${id}`, data); },
     delete(id) { return App.delete(`/api/users/${id}`); },
+    hardDelete(id) { return App.delete(`/api/users/${id}?hard=true`); },
     updateRole(id, role) { return App.put(`/api/users/${id}/role`, { role }); }
   },
 
@@ -210,6 +211,23 @@ const App = {
 
   roleBadgeClass(role) {
     return `badge role-${role}`;
+  },
+
+  // 权限检查 - admin始终有权限
+  hasPermission(user, permission) {
+    if (!user) return false;
+    if (user.role === 'admin') return true;
+    return !!user[permission];
+  },
+
+  // 获取用户权限描述
+  getPermDesc(user) {
+    if (!user) return '';
+    const perms = [];
+    if (user.role === 'admin' || user.can_publish) perms.push('发布');
+    if (user.role === 'admin' || user.can_edit) perms.push('修改');
+    if (user.role === 'admin' || user.can_process) perms.push('处理');
+    return perms.join('、') || '无权限';
   },
 
   escapeHtml: escapeHtml,

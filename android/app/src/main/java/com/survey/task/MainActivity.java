@@ -138,17 +138,17 @@ public class MainActivity extends AppCompatActivity {
     }
 
     /**
-     * 加载网页 - 在URL中附带JWT token
+     * 加载网页 - 直接加载dashboard，通过cookie和JS注入token
      */
     private void loadWebPage() {
-        String loadUrl = serverUrl;
-
-        // 如果有token，添加到URL参数中
+        // 先设置cookie，确保页面加载时能读取到token
         if (jwtToken != null && !jwtToken.isEmpty()) {
-            String separator = loadUrl.contains("?") ? "&" : "?";
-            loadUrl = loadUrl + separator + "token=" + jwtToken;
+            String cookieStr = "auth_token=" + jwtToken + "; path=/";
+            android.webkit.CookieManager.getInstance().setCookie(serverUrl, cookieStr);
         }
 
+        // 直接加载dashboard.html，跳过index.html登录页
+        String loadUrl = serverUrl + "/dashboard.html";
         webView.loadUrl(loadUrl);
     }
 
@@ -228,14 +228,36 @@ public class MainActivity extends AppCompatActivity {
 
         @Override
         public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
-            // 在WebView内加载所有页面
             String url = request.getUrl().toString();
-            // 只加载同域名的页面，外部链接可以用系统浏览器
+            String scheme = request.getUrl().getScheme();
+            
+            // 处理tel:链接 - 拨打电话
+            if ("tel".equals(scheme)) {
+                Intent dialIntent = new Intent(Intent.ACTION_DIAL, request.getUrl());
+                startActivity(dialIntent);
+                return true;
+            }
+            
+            // 处理sms:链接 - 发送短信
+            if ("sms".equals(scheme)) {
+                Intent smsIntent = new Intent(Intent.ACTION_SENDTO, request.getUrl());
+                startActivity(smsIntent);
+                return true;
+            }
+            
+            // 处理mailto:链接 - 发送邮件
+            if ("mailto".equals(scheme)) {
+                Intent emailIntent = new Intent(Intent.ACTION_SENDTO, request.getUrl());
+                startActivity(emailIntent);
+                return true;
+            }
+            
+            // 同域名页面在WebView内加载（不调用view.loadUrl，避免双重加载）
             if (url.startsWith(serverUrl)) {
-                view.loadUrl(url);
                 return false;
             }
-            // 外部链接在系统浏览器中打开
+            
+            // 其他外部链接在系统浏览器中打开
             Intent browserIntent = new Intent(Intent.ACTION_VIEW, request.getUrl());
             startActivity(browserIntent);
             return true;
@@ -250,10 +272,19 @@ public class MainActivity extends AppCompatActivity {
             errorLayout.setVisibility(View.GONE);
             swipeRefreshLayout.setVisibility(View.VISIBLE);
 
-            // 注入token到cookie（备用方案）
+            // 注入token到localStorage和cookie，确保网页自动登录
             if (jwtToken != null && !jwtToken.isEmpty()) {
+                // 设置cookie
                 String cookieStr = "auth_token=" + jwtToken + "; path=/";
                 android.webkit.CookieManager.getInstance().setCookie(serverUrl, cookieStr);
+                
+                // 注入JavaScript设置localStorage token
+                String js = "javascript:void(function(){" +
+                    "if(!localStorage.getItem('token')){" +
+                    "localStorage.setItem('token','" + jwtToken + "');" +
+                    "}" +
+                    "}())";
+                view.evaluateJavascript(js, null);
             }
         }
 

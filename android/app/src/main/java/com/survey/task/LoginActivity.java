@@ -16,6 +16,8 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import org.json.JSONObject;
 
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
@@ -23,21 +25,23 @@ import java.net.URL;
 /**
  * 登录页面Activity
  * 功能：输入服务器地址、用户名、密码，验证后跳转WebView主页
+ * 支持：记住用户名密码、自动登录
  */
 public class LoginActivity extends AppCompatActivity {
 
     // SharedPreferences文件名和键名
     private static final String PREFS_NAME = "SurveyTaskPrefs";
     private static final String KEY_SERVER_URL = "server_url";
-    private static final String KEY_REMEMBER_SERVER = "remember_server";
-    private static final String KEY_JWT_TOKEN = "jwt_token";
     private static final String KEY_USERNAME = "username";
+    private static final String KEY_PASSWORD = "password";
+    private static final String KEY_REMEMBER = "remember";
+    private static final String KEY_JWT_TOKEN = "jwt_token";
 
     // UI控件
     private EditText etServerUrl;
     private EditText etUsername;
     private EditText etPassword;
-    private CheckBox cbRememberServer;
+    private CheckBox cbRemember;
     private Button btnLogin;
     private ProgressBar progressBar;
 
@@ -55,11 +59,14 @@ public class LoginActivity extends AppCompatActivity {
         // 初始化视图
         initViews();
 
-        // 加载已保存的服务器地址
-        loadSavedServerUrl();
+        // 加载已保存的账号信息
+        loadSavedCredentials();
 
         // 设置登录按钮点击事件
         btnLogin.setOnClickListener(v -> attemptLogin());
+
+        // 检查是否有已保存的有效token，自动登录
+        checkAutoLogin();
     }
 
     /**
@@ -69,26 +76,96 @@ public class LoginActivity extends AppCompatActivity {
         etServerUrl = findViewById(R.id.et_server_url);
         etUsername = findViewById(R.id.et_username);
         etPassword = findViewById(R.id.et_password);
-        cbRememberServer = findViewById(R.id.cb_remember_server);
+        cbRemember = findViewById(R.id.cb_remember_server);
         btnLogin = findViewById(R.id.btn_login);
         progressBar = findViewById(R.id.progress_bar);
 
-        // 恢复记住的服务器地址状态
-        cbRememberServer.setChecked(sharedPreferences.getBoolean(KEY_REMEMBER_SERVER, true));
+        // 恢复记住密码的状态
+        cbRemember.setChecked(sharedPreferences.getBoolean(KEY_REMEMBER, true));
     }
 
     /**
-     * 加载已保存的服务器地址
+     * 加载已保存的账号信息
      */
-    private void loadSavedServerUrl() {
+    private void loadSavedCredentials() {
         String savedUrl = sharedPreferences.getString(KEY_SERVER_URL, "");
         String savedUsername = sharedPreferences.getString(KEY_USERNAME, "");
+        String savedPassword = sharedPreferences.getString(KEY_PASSWORD, "");
+
         if (!savedUrl.isEmpty()) {
             etServerUrl.setText(savedUrl);
         }
         if (!savedUsername.isEmpty()) {
             etUsername.setText(savedUsername);
         }
+        if (!savedPassword.isEmpty()) {
+            etPassword.setText(savedPassword);
+        }
+    }
+
+    /**
+     * 检查自动登录 - 如果有已保存的有效token，直接跳转
+     */
+    private void checkAutoLogin() {
+        String savedToken = sharedPreferences.getString(KEY_JWT_TOKEN, "");
+        String savedUrl = sharedPreferences.getString(KEY_SERVER_URL, "");
+
+        if (savedToken.isEmpty() || savedUrl.isEmpty()) {
+            return;
+        }
+
+        // 显示加载状态
+        showLoading(true);
+
+        // 在后台线程验证token
+        new Thread(() -> {
+            try {
+                boolean isValid = validateToken(savedUrl, savedToken);
+                if (isValid) {
+                    // Token有效，直接跳转主页
+                    runOnUiThread(() -> {
+                        showLoading(false);
+                        navigateToMain(savedUrl, savedToken);
+                    });
+                } else {
+                    // Token无效，清除并显示登录页
+                    sharedPreferences.edit().remove(KEY_JWT_TOKEN).apply();
+                    runOnUiThread(() -> showLoading(false));
+                }
+            } catch (Exception e) {
+                // 验证失败（网络问题等），显示登录页
+                runOnUiThread(() -> showLoading(false));
+            }
+        }).start();
+    }
+
+    /**
+     * 验证token是否仍然有效
+     */
+    private boolean validateToken(String serverUrl, String token) throws Exception {
+        URL url = new URL(serverUrl + "/api/auth/me");
+        HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+        conn.setRequestMethod("GET");
+        conn.setRequestProperty("Authorization", "Bearer " + token);
+        conn.setRequestProperty("Accept", "application/json");
+        conn.setConnectTimeout(5000);
+        conn.setReadTimeout(5000);
+
+        int responseCode = conn.getResponseCode();
+        if (responseCode == HttpURLConnection.HTTP_OK) {
+            BufferedReader reader = new BufferedReader(
+                    new InputStreamReader(conn.getInputStream(), "UTF-8"));
+            StringBuilder response = new StringBuilder();
+            String line;
+            while ((line = reader.readLine()) != null) {
+                response.append(line);
+            }
+            reader.close();
+
+            JSONObject jsonResponse = new JSONObject(response.toString());
+            return jsonResponse.optInt("code") == 0;
+        }
+        return false;
     }
 
     /**
@@ -133,8 +210,8 @@ public class LoginActivity extends AppCompatActivity {
             return;
         }
 
-        // 保存服务器地址（如果勾选了记住）
-        saveServerUrl(serverUrl, username);
+        // 保存账号信息（如果勾选了记住）
+        saveCredentials(serverUrl, username, password);
 
         // 创建final副本供lambda使用
         final String finalServerUrl = serverUrl;
@@ -207,8 +284,8 @@ public class LoginActivity extends AppCompatActivity {
         // 读取响应
         int responseCode = conn.getResponseCode();
         if (responseCode == HttpURLConnection.HTTP_OK) {
-            java.io.BufferedReader reader = new java.io.BufferedReader(
-                    new java.io.InputStreamReader(conn.getInputStream(), "UTF-8"));
+            BufferedReader reader = new BufferedReader(
+                    new InputStreamReader(conn.getInputStream(), "UTF-8"));
             StringBuilder response = new StringBuilder();
             String line;
             while ((line = reader.readLine()) != null) {
@@ -232,18 +309,20 @@ public class LoginActivity extends AppCompatActivity {
     }
 
     /**
-     * 保存服务器地址到SharedPreferences
+     * 保存账号信息到SharedPreferences
      */
-    private void saveServerUrl(String serverUrl, String username) {
+    private void saveCredentials(String serverUrl, String username, String password) {
         SharedPreferences.Editor editor = sharedPreferences.edit();
-        if (cbRememberServer.isChecked()) {
+        if (cbRemember.isChecked()) {
             editor.putString(KEY_SERVER_URL, serverUrl);
             editor.putString(KEY_USERNAME, username);
-            editor.putBoolean(KEY_REMEMBER_SERVER, true);
+            editor.putString(KEY_PASSWORD, password);
+            editor.putBoolean(KEY_REMEMBER, true);
         } else {
             editor.remove(KEY_SERVER_URL);
             editor.remove(KEY_USERNAME);
-            editor.putBoolean(KEY_REMEMBER_SERVER, false);
+            editor.remove(KEY_PASSWORD);
+            editor.putBoolean(KEY_REMEMBER, false);
         }
         editor.apply();
     }

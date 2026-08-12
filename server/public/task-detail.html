@@ -227,22 +227,22 @@
       const content = document.getElementById('actionContent');
       let html = '<div class="action-buttons">';
 
-      // 查勘员：更新查勘状态
-      if (role === 'surveyor' || role === 'admin') {
+      // 有处理任务权限：更新查勘状态
+      if (App.hasPermission(currentUser, 'can_process')) {
         if (task.survey_status === 'not_surveyed') {
           html += '<button class="btn btn-primary" onclick="openSurveyModal()">更新查勘状态</button>';
         }
       }
 
-      // 管理员/发布者：更新处理状态
-      if (role === 'admin' || role === 'publisher') {
+      // 有修改任务权限：更新处理状态
+      if (App.hasPermission(currentUser, 'can_edit')) {
         if (task.survey_status === 'surveyed') {
           html += '<button class="btn btn-warning" onclick="openProcessModal()">更新处理状态</button>';
         }
       }
 
       // 管理员：重新指派
-      if (role === 'admin') {
+      if (currentUser.role === 'admin') {
         html += '<button class="btn btn-secondary" onclick="openReassignModal()">重新指派</button>';
       }
 
@@ -323,7 +323,7 @@
         try {
           const users = await App.loadUsers();
           select.innerHTML = '<option value="">请选择查勘员</option>';
-          users.filter(u => u.role === 'surveyor' && u.is_active !== 0).forEach(u => {
+          users.filter(u => (u.can_process || u.role === 'surveyor') && u.is_active !== 0).forEach(u => {
             const opt = document.createElement('option');
             opt.value = u.id;
             opt.textContent = u.username + (u.display_name ? ` (${u.display_name})` : '');

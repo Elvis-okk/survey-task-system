@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { getQueries } = require('../database');
-const { requireAuth, requireRole } = require('../middleware');
+const { requireAuth, requireRole, requirePermission } = require('../middleware');
 
 // 获取io实例的辅助函数
 function getIo(req) {
@@ -96,7 +96,7 @@ router.get('/', requireAuth, (req, res) => {
 });
 
 // POST /api/tasks - 发布新任务
-router.post('/', requireAuth, (req, res) => {
+router.post('/', requireAuth, requirePermission('can_publish'), (req, res) => {
   try {
     const { title, publish_time, tag, village_id, address, contact_phone, purchase_info, remark, insurance_id, assigned_to } = req.body;
 
@@ -169,8 +169,8 @@ router.put('/:id', requireAuth, (req, res) => {
       return res.json({ code: 404, data: null, message: '任务不存在' });
     }
 
-    // 发布人员只能修改自己发布的任务
-    if (req.user.role === 'publisher' && task.created_by !== req.user.id) {
+    // 没有修改权限的用户只能修改自己发布的任务
+    if (req.user.role !== 'admin' && !req.user.can_edit && task.created_by !== req.user.id) {
       return res.json({ code: 403, data: null, message: '只能修改自己发布的任务' });
     }
 
@@ -203,7 +203,7 @@ router.put('/:id', requireAuth, (req, res) => {
 });
 
 // PUT /api/tasks/:id/survey - 更新查勘状态
-router.put('/:id/survey', requireAuth, requireRole('admin', 'surveyor'), (req, res) => {
+router.put('/:id/survey', requireAuth, requirePermission('can_process'), (req, res) => {
   try {
     const { taskQueries, logQueries } = getQueries();
     const task = taskQueries.getById(req.params.id);
@@ -235,7 +235,7 @@ router.put('/:id/survey', requireAuth, requireRole('admin', 'surveyor'), (req, r
 });
 
 // PUT /api/tasks/:id/process - 更新处理进度
-router.put('/:id/process', requireAuth, requireRole('admin', 'surveyor'), (req, res) => {
+router.put('/:id/process', requireAuth, requirePermission('can_edit'), (req, res) => {
   try {
     const { taskQueries, logQueries } = getQueries();
     const task = taskQueries.getById(req.params.id);
@@ -269,7 +269,7 @@ router.put('/:id/process', requireAuth, requireRole('admin', 'surveyor'), (req, 
 });
 
 // PUT /api/tasks/:id/reassign - 改派负责人
-router.put('/:id/reassign', requireAuth, requireRole('admin', 'surveyor'), (req, res) => {
+router.put('/:id/reassign', requireAuth, requireRole('admin'), (req, res) => {
   try {
     const { taskQueries, logQueries } = getQueries();
     const task = taskQueries.getById(req.params.id);

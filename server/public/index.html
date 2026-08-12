@@ -129,16 +129,45 @@
       }
     });
 
-    // 检查是否已登录
-    (async function checkExistingAuth() {
-      const token = localStorage.getItem('token');
-      if (!token) return;
+    // 检查URL中的token参数（Android WebView传入）
+    (async function checkTokenFromApp() {
+      const urlParams = new URLSearchParams(window.location.search);
+      const tokenFromUrl = urlParams.get('token');
+      const tokenFromCookie = document.cookie.match(/auth_token=([^;]+)/)?.[1];
+      const token = tokenFromUrl || tokenFromCookie;
+
+      if (token) {
+        try {
+          const apiBase = localStorage.getItem('apiBase');
+          const baseUrl = apiBase ? apiBase.replace(/\/$/, '') : window.location.origin;
+          // 验证token有效性
+          const res = await fetch(`${baseUrl}/api/auth/me`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+          const result = await res.json();
+          if (result.code === 0) {
+            // token有效，保存到localStorage
+            localStorage.setItem('token', token);
+            localStorage.setItem('user', JSON.stringify(result.data));
+            // 清除URL中的token参数，避免暴露在地址栏
+            window.history.replaceState({}, document.title, window.location.pathname);
+            window.location.href = 'dashboard.html';
+            return;
+          }
+        } catch (e) {
+          // token无效，继续显示登录页
+        }
+      }
+
+      // 检查是否已登录
+      const savedToken = localStorage.getItem('token');
+      if (!savedToken) return;
 
       try {
         const apiBase = localStorage.getItem('apiBase');
         const baseUrl = apiBase ? apiBase.replace(/\/$/, '') : window.location.origin;
         const res = await fetch(`${baseUrl}/api/auth/me`, {
-          headers: { 'Authorization': `Bearer ${token}` }
+          headers: { 'Authorization': `Bearer ${savedToken}` }
         });
         const result = await res.json();
         if (result.code === 0) {

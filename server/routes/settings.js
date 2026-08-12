@@ -123,14 +123,14 @@ router.get('/villages', requireAuth, (req, res) => {
 // POST /api/settings/villages - 创建村/社区（管理员）
 router.post('/villages', requireAuth, requireRole('admin'), (req, res) => {
   try {
-    const { name, leader_id } = req.body;
+    const { name, leader_id, contact_phone } = req.body;
 
     if (!name) {
       return res.json({ code: 400, data: null, message: '村/社区名称不能为空' });
     }
 
     const { villageQueries } = getQueries();
-    const result = villageQueries.create(name, leader_id || null);
+    const result = villageQueries.create(name, leader_id || null, contact_phone || '');
 
     res.json({ code: 0, data: { id: result.lastInsertRowid }, message: '村/社区创建成功' });
   } catch (err) {
@@ -143,7 +143,7 @@ router.post('/villages', requireAuth, requireRole('admin'), (req, res) => {
 router.put('/villages/:id', requireAuth, requireRole('admin'), (req, res) => {
   try {
     const { id } = req.params;
-    const { name, leader_id } = req.body;
+    const { name, leader_id, contact_phone } = req.body;
 
     const { villageQueries } = getQueries();
     const village = villageQueries.getById(id);
@@ -151,7 +151,12 @@ router.put('/villages/:id', requireAuth, requireRole('admin'), (req, res) => {
       return res.json({ code: 404, data: null, message: '村/社区不存在' });
     }
 
-    villageQueries.update(name || village.name, leader_id !== undefined ? leader_id : village.leader_id, id);
+    villageQueries.update(
+      name || village.name,
+      leader_id !== undefined ? leader_id : village.leader_id,
+      contact_phone !== undefined ? contact_phone : (village.contact_phone || ''),
+      id
+    );
 
     res.json({ code: 0, data: null, message: '村/社区更新成功' });
   } catch (err) {

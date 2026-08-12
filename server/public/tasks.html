@@ -12,7 +12,11 @@
   <div class="page-container">
     <div class="page-header">
       <h2>任务列表</h2>
-      <a href="publish.html" class="btn btn-primary btn-sm" id="publishBtn">+ 发布任务</a>
+      <div style="display:flex;align-items:center;gap:8px">
+        <a href="publish.html" class="btn btn-primary btn-sm" id="publishBtn">+ 发布任务</a>
+        <button class="btn btn-sm btn-primary" id="btnMyTasks" onclick="toggleTaskFilter(true)">我的任务</button>
+        <button class="btn btn-sm btn-secondary" id="btnAllTasks" onclick="toggleTaskFilter(false)">全部任务</button>
+      </div>
     </div>
 
     <!-- 筛选栏 -->
@@ -69,9 +73,20 @@
     const currentUser = App.initPage();
     const role = currentUser.role;
 
-    // 权限控制
-    if (role === 'surveyor') {
+    // 权限控制 - 发布任务权限
+    if (!App.hasPermission(currentUser, 'can_publish')) {
       document.getElementById('publishBtn').style.display = 'none';
+    }
+
+    // 任务过滤状态
+    let showMyTasks = true;
+
+    function toggleTaskFilter(myTasks) {
+      showMyTasks = myTasks;
+      document.getElementById('btnMyTasks').className = `btn btn-sm ${myTasks ? 'btn-primary' : 'btn-secondary'}`;
+      document.getElementById('btnAllTasks').className = `btn btn-sm ${myTasks ? 'btn-secondary' : 'btn-primary'}`;
+      currentPage = 1;
+      loadTasks();
     }
 
     // 状态
@@ -141,12 +156,17 @@
       const tag = document.getElementById('filterTag').value;
       if (tag) params.tag = tag;
 
-      // 角色过滤
-      if (role === 'surveyor') {
-        params.assigned_to = currentUser.id;
-      } else if (role === 'publisher') {
-        params.created_by = currentUser.id;
+      // 任务过滤：我的任务 vs 全部任务
+      if (showMyTasks) {
+        if (role === 'surveyor') {
+          params.assigned_to = currentUser.id;
+        } else if (role === 'publisher') {
+          params.created_by = currentUser.id;
+        } else if (role === 'admin') {
+          params.assigned_to = currentUser.id;
+        }
       }
+      // showMyTasks=false 时不加过滤，显示所有任务
 
       return params;
     }

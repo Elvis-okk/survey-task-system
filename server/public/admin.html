@@ -18,7 +18,7 @@
     <div class="tabs">
       <button class="tab active" onclick="switchTab('users')">用户管理</button>
       <button class="tab" onclick="switchTab('tags')">标签管理</button>
-      <button class="tab" onclick="switchTab('villages')">村庄管理</button>
+      <button class="tab" onclick="switchTab('villages')">村社区管理</button>
       <button class="tab" onclick="switchTab('insurances')">出险情况</button>
     </div>
 
@@ -37,12 +37,13 @@
                 <th>用户名</th>
                 <th>显示名</th>
                 <th>角色</th>
+                <th>权限</th>
                 <th>状态</th>
                 <th>操作</th>
               </tr>
             </thead>
             <tbody id="userTableBody">
-              <tr><td colspan="6"><div class="loading-spinner"></div></td></tr>
+              <tr><td colspan="7"><div class="loading-spinner"></div></td></tr>
             </tbody>
           </table>
         </div>
@@ -74,11 +75,11 @@
       </div>
     </div>
 
-    <!-- 村庄管理 -->
+    <!-- 村社区管理 -->
     <div id="tab-villages" class="tab-content">
       <div class="section-header">
-        <h3>村庄列表</h3>
-        <button class="btn btn-primary btn-sm" onclick="openVillageModal()">+ 添加村庄</button>
+        <h3>村社区列表</h3>
+        <button class="btn btn-primary btn-sm" onclick="openVillageModal()">+ 添加村社区</button>
       </div>
       <div class="card">
         <div class="table-responsive">
@@ -148,12 +149,26 @@
           <input type="text" id="userDisplayName" class="form-control" placeholder="请输入显示名" maxlength="50">
         </div>
         <div class="form-group">
-          <label class="form-label">角色 <span class="text-danger">*</span></label>
+          <label class="form-label">角色</label>
           <select id="userRole" class="form-control">
             <option value="surveyor">查勘员</option>
             <option value="publisher">发布者</option>
             <option value="admin">管理员</option>
           </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">权限</label>
+          <div style="display:flex;flex-direction:column;gap:8px;padding-top:4px">
+            <label style="display:flex;align-items:center;gap:6px;cursor:pointer">
+              <input type="checkbox" id="permPublish"> <span>发布任务</span>
+            </label>
+            <label style="display:flex;align-items:center;gap:6px;cursor:pointer">
+              <input type="checkbox" id="permEdit"> <span>修改任务</span>
+            </label>
+            <label style="display:flex;align-items:center;gap:6px;cursor:pointer">
+              <input type="checkbox" id="permProcess"> <span>处理任务</span>
+            </label>
+          </div>
         </div>
       </div>
       <div class="modal-footer">
@@ -188,22 +203,24 @@
     </div>
   </div>
 
-  <!-- 村庄弹窗 -->
+  <!-- 村社区弹窗 -->
   <div id="villageModal" class="modal-overlay" style="display:none" onclick="closeVillageModal()">
     <div class="modal" onclick="event.stopPropagation()">
       <div class="modal-header">
-        <h3 id="villageModalTitle">添加村庄</h3>
+        <h3 id="villageModalTitle">添加村社区</h3>
         <button class="modal-close" onclick="closeVillageModal()">&times;</button>
       </div>
       <div class="modal-body">
         <input type="hidden" id="editVillageId">
         <div class="form-group">
           <label class="form-label">名称 <span class="text-danger">*</span></label>
-          <input type="text" id="villageName" class="form-control" placeholder="请输入村庄名称" maxlength="50">
+          <input type="text" id="villageName" class="form-control" placeholder="请输入村社区名称" maxlength="50">
         </div>
         <div class="form-group">
           <label class="form-label">负责人</label>
-          <input type="text" id="villageLeader" class="form-control" placeholder="请输入负责人" maxlength="50">
+          <select id="villageLeader" class="form-control">
+            <option value="">请选择负责人</option>
+          </select>
         </div>
         <div class="form-group">
           <label class="form-label">联系电话</label>
@@ -254,6 +271,9 @@
       setTimeout(() => location.href = 'dashboard.html', 1500);
     }
 
+    // 缓存用户列表（用于村社区负责人选择）
+    let cachedUsers = [];
+
     // 标签页切换
     function switchTab(tab) {
       document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
@@ -272,25 +292,34 @@
       const tbody = document.getElementById('userTableBody');
       try {
         const users = await App.users.list();
+        cachedUsers = users;
         if (users.length === 0) {
-          tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">暂无用户</td></tr>';
+          tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">暂无用户</td></tr>';
           return;
         }
-        tbody.innerHTML = users.map(u => `
+        tbody.innerHTML = users.map(u => {
+          const perms = [];
+          if (u.can_publish) perms.push('发布');
+          if (u.can_edit) perms.push('修改');
+          if (u.can_process) perms.push('处理');
+          const permText = perms.length > 0 ? perms.join('、') : '<span class="text-muted">无</span>';
+          return `
           <tr>
             <td>${u.id}</td>
             <td>${escapeHtml(u.username)}</td>
             <td>${escapeHtml(u.display_name || '-')}</td>
             <td><span class="badge ${App.roleBadgeClass(u.role)}">${App.roleName(u.role)}</span></td>
+            <td style="font-size:12px">${permText}</td>
             <td><span class="badge ${u.is_active !== 0 ? 'badge-success' : 'badge-danger'}">${u.is_active !== 0 ? '启用' : '禁用'}</span></td>
             <td>
               <button class="btn btn-sm btn-secondary" onclick="editUser(${u.id})">编辑</button>
-              <button class="btn btn-sm ${u.is_active !== 0 ? 'btn-danger' : 'btn-success'}" onclick="toggleUser(${u.id}, ${u.is_active})">${u.is_active !== 0 ? '禁用' : '启用'}</button>
+              <button class="btn btn-sm ${u.is_active !== 0 ? 'btn-warning' : 'btn-success'}" onclick="toggleUser(${u.id}, ${u.is_active})">${u.is_active !== 0 ? '禁用' : '启用'}</button>
+              <button class="btn btn-sm btn-danger" onclick="deleteUser(${u.id})">删除</button>
             </td>
-          </tr>
-        `).join('');
+          </tr>`;
+        }).join('');
       } catch (e) {
-        tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">加载失败</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">加载失败</td></tr>';
       }
     }
 
@@ -300,11 +329,35 @@
       document.getElementById('userPassword').value = '';
       document.getElementById('userDisplayName').value = '';
       document.getElementById('userRole').value = 'surveyor';
+      document.getElementById('permPublish').checked = false;
+      document.getElementById('permEdit').checked = false;
+      document.getElementById('permProcess').checked = false;
       document.getElementById('userModalTitle').textContent = '添加用户';
       document.getElementById('passwordGroup').style.display = '';
       document.getElementById('userUsername').disabled = false;
       document.getElementById('userModal').style.display = '';
+      // 角色切换时自动设置权限
+      updatePermsFromRole();
     }
+
+    // 角色切换自动设置权限
+    function updatePermsFromRole() {
+      const role = document.getElementById('userRole').value;
+      if (role === 'admin') {
+        document.getElementById('permPublish').checked = true;
+        document.getElementById('permEdit').checked = true;
+        document.getElementById('permProcess').checked = true;
+      } else if (role === 'publisher') {
+        document.getElementById('permPublish').checked = true;
+        document.getElementById('permEdit').checked = true;
+        document.getElementById('permProcess').checked = false;
+      } else if (role === 'surveyor') {
+        document.getElementById('permPublish').checked = false;
+        document.getElementById('permEdit').checked = false;
+        document.getElementById('permProcess').checked = true;
+      }
+    }
+    document.getElementById('userRole').addEventListener('change', updatePermsFromRole);
 
     async function editUser(id) {
       try {
@@ -313,11 +366,14 @@
         if (!user) return;
         document.getElementById('editUserId').value = user.id;
         document.getElementById('userUsername').value = user.username;
-        document.getElementById('userUsername').disabled = true;
+        document.getElementById('userUsername').disabled = false;
         document.getElementById('userPassword').value = '';
         document.getElementById('passwordGroup').style.display = 'none';
         document.getElementById('userDisplayName').value = user.display_name || '';
         document.getElementById('userRole').value = user.role;
+        document.getElementById('permPublish').checked = !!user.can_publish;
+        document.getElementById('permEdit').checked = !!user.can_edit;
+        document.getElementById('permProcess').checked = !!user.can_process;
         document.getElementById('userModalTitle').textContent = '编辑用户';
         document.getElementById('userModal').style.display = '';
       } catch (e) {
@@ -335,6 +391,9 @@
       const password = document.getElementById('userPassword').value;
       const displayName = document.getElementById('userDisplayName').value.trim();
       const role = document.getElementById('userRole').value;
+      const canPublish = document.getElementById('permPublish').checked;
+      const canEdit = document.getElementById('permEdit').checked;
+      const canProcess = document.getElementById('permProcess').checked;
 
       if (!username) { App.showToast('请输入用户名', 'warning'); return; }
       if (!editId && !password) { App.showToast('请输入密码', 'warning'); return; }
@@ -344,13 +403,17 @@
 
       try {
         if (editId) {
-          await App.users.updateRole(editId, { role });
-          if (displayName) {
-            await App.users.update(editId, { display_name: displayName });
-          }
+          await App.users.update(editId, {
+            username,
+            display_name: displayName,
+            role,
+            can_publish: canPublish,
+            can_edit: canEdit,
+            can_process: canProcess
+          });
           App.showToast('用户更新成功', 'success');
         } else {
-          await App.users.create({ username, password, display_name: displayName, role });
+          await App.users.create({ username, password, display_name: displayName, role, can_publish: canPublish, can_edit: canEdit, can_process: canProcess });
           App.showToast('用户创建成功', 'success');
         }
         closeUserModal();
@@ -375,6 +438,20 @@
         App.clearCache();
       } catch (e) {
         App.showToast(e.message || '操作失败', 'error');
+      }
+    }
+
+    async function deleteUser(id) {
+      const confirmed = await App.showConfirm('确定永久删除该用户吗？此操作不可恢复！');
+      if (!confirmed) return;
+
+      try {
+        await App.users.hardDelete(id);
+        App.showToast('用户已永久删除', 'success');
+        loadUsers();
+        App.clearCache();
+      } catch (e) {
+        App.showToast(e.message || '删除失败', 'error');
       }
     }
 
@@ -466,20 +543,20 @@
       }
     }
 
-    // ========== 村庄管理 ==========
+    // ========== 村社区管理 ==========
     async function loadVillages() {
       const tbody = document.getElementById('villageTableBody');
       try {
         const villages = await App.settings.villages.list();
         if (villages.length === 0) {
-          tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">暂无村庄</td></tr>';
+          tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">暂无村社区</td></tr>';
           return;
         }
         tbody.innerHTML = villages.map(v => `
           <tr>
             <td>${v.id}</td>
             <td>${escapeHtml(v.name)}</td>
-            <td>${escapeHtml(v.leader || '-')}</td>
+            <td>${escapeHtml(v.leader_name || v.leader || '-')}</td>
             <td>${escapeHtml(v.contact_phone || '-')}</td>
             <td>
               <button class="btn btn-sm btn-secondary" onclick="editVillage(${v.id})">编辑</button>
@@ -492,13 +569,33 @@
       }
     }
 
+    async function loadVillageLeaderOptions(selectedLeaderId) {
+      const select = document.getElementById('villageLeader');
+      // 加载用户列表
+      if (cachedUsers.length === 0) {
+        try {
+          cachedUsers = await App.users.list();
+        } catch (e) {
+          console.error('加载用户列表失败:', e);
+        }
+      }
+      select.innerHTML = '<option value="">请选择负责人</option>';
+      cachedUsers.filter(u => u.is_active !== 0).forEach(u => {
+        const opt = document.createElement('option');
+        opt.value = u.id;
+        opt.textContent = u.username + (u.display_name ? ` (${u.display_name})` : '');
+        if (selectedLeaderId && String(u.id) === String(selectedLeaderId)) opt.selected = true;
+        select.appendChild(opt);
+      });
+    }
+
     function openVillageModal() {
       document.getElementById('editVillageId').value = '';
       document.getElementById('villageName').value = '';
-      document.getElementById('villageLeader').value = '';
       document.getElementById('villagePhone').value = '';
-      document.getElementById('villageModalTitle').textContent = '添加村庄';
+      document.getElementById('villageModalTitle').textContent = '添加村社区';
       document.getElementById('villageModal').style.display = '';
+      loadVillageLeaderOptions();
     }
 
     async function editVillage(id) {
@@ -508,12 +605,12 @@
         if (!village) return;
         document.getElementById('editVillageId').value = village.id;
         document.getElementById('villageName').value = village.name;
-        document.getElementById('villageLeader').value = village.leader || '';
         document.getElementById('villagePhone').value = village.contact_phone || '';
-        document.getElementById('villageModalTitle').textContent = '编辑村庄';
+        document.getElementById('villageModalTitle').textContent = '编辑村社区';
         document.getElementById('villageModal').style.display = '';
+        await loadVillageLeaderOptions(village.leader_id);
       } catch (e) {
-        App.showToast('加载村庄信息失败', 'error');
+        App.showToast('加载村社区信息失败', 'error');
       }
     }
 
@@ -524,18 +621,18 @@
     async function submitVillage() {
       const editId = document.getElementById('editVillageId').value;
       const name = document.getElementById('villageName').value.trim();
-      const leader = document.getElementById('villageLeader').value.trim();
+      const leaderId = document.getElementById('villageLeader').value;
       const phone = document.getElementById('villagePhone').value.trim();
 
-      if (!name) { App.showToast('请输入村庄名称', 'warning'); return; }
+      if (!name) { App.showToast('请输入村社区名称', 'warning'); return; }
 
       try {
         if (editId) {
-          await App.settings.villages.update(editId, { name, leader, contact_phone: phone });
-          App.showToast('村庄更新成功', 'success');
+          await App.settings.villages.update(editId, { name, leader_id: leaderId ? parseInt(leaderId) : null, contact_phone: phone });
+          App.showToast('村社区更新成功', 'success');
         } else {
-          await App.settings.villages.create({ name, leader, contact_phone: phone });
-          App.showToast('村庄创建成功', 'success');
+          await App.settings.villages.create({ name, leader_id: leaderId ? parseInt(leaderId) : null, contact_phone: phone });
+          App.showToast('村社区创建成功', 'success');
         }
         closeVillageModal();
         loadVillages();
@@ -546,11 +643,11 @@
     }
 
     async function deleteVillage(id) {
-      const confirmed = await App.showConfirm('确定删除该村庄吗？');
+      const confirmed = await App.showConfirm('确定删除该村社区吗？');
       if (!confirmed) return;
       try {
         await App.settings.villages.delete(id);
-        App.showToast('村庄已删除', 'success');
+        App.showToast('村社区已删除', 'success');
         loadVillages();
         App.clearCache();
       } catch (e) {
