@@ -79,14 +79,23 @@ jobs:
         with:
           path: |
             ~/.gradle/caches
-            ~/.gradle/wrapper
-          key: gradle-${{ runner.os }}-${{ hashFiles('android/**/*.gradle', 'android/gradle/wrapper/gradle-wrapper.properties') }}
+            ~/.gradle/dists
+          key: gradle-${{ runner.os }}-7.5.1-v2
           restore-keys: gradle-${{ runner.os }}-
       - name: Build APK
         working-directory: android
         run: |
-          chmod +x gradlew
-          ./gradlew assembleRelease --no-daemon
+          GRADLE_HOME="$HOME/.gradle/dists/gradle-7.5.1"
+          if [ ! -f "$GRADLE_HOME/bin/gradle" ]; then
+            echo "Downloading Gradle 7.5.1..."
+            wget -q --tries=3 --timeout=60 https://services.gradle.org/distributions/gradle-7.5.1-bin.zip -O /tmp/gradle.zip
+            mkdir -p "$GRADLE_HOME"
+            unzip -q /tmp/gradle.zip -d "$GRADLE_HOME/../"
+            mv "$HOME/.gradle/dists/gradle-7.5.1" "$GRADLE_HOME.tmp" 2>/dev/null || true
+            rm -f /tmp/gradle.zip
+          fi
+          echo "Building APK..."
+          "$GRADLE_HOME/bin/gradle" assembleRelease --no-daemon
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
