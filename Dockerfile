@@ -23,18 +23,18 @@ RUN mkdir -p /app/data
 
 # Set default environment variables
 ENV NODE_ENV=production \
-    PORT=3000 \
+    PORT=22233 \
     JWT_SECRET=change-this-secret-in-production \
     ADMIN_PASSWORD=admin123 \
     DB_PATH=/app/data/survey.db \
     AUTO_SAVE_INTERVAL=5
 
 # Expose port
-EXPOSE 3000
+EXPOSE 22233
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=15s --retries=3 \
-    CMD wget --no-verbose --tries=1 --spider http://localhost:${PORT}/api/auth/login || exit 1
+    CMD wget --no-verbose --tries=1 --spider http://localhost:22233/api/auth/login || exit 1
 
 # Data volume mount point
 VOLUME ["/app/data"]

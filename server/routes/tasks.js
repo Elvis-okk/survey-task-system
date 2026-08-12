@@ -227,7 +227,7 @@ router.put('/:id/survey', requireAuth, requirePermission('can_process'), (req, r
 
     const oldStatus = task.survey_status;
     // 标记已查勘后自动设置 process_status = 'pending'，未查勘时清空处理状态
-    const processStatus = survey_status === 'surveyed' ? 'pending' : '';
+    const processStatus = survey_status === 'surveyed' ? 'pending' : null;
 
     taskQueries.updateSurveyStatus(survey_status, processStatus, survey_remark || '', req.params.id);
 
@@ -244,7 +244,7 @@ router.put('/:id/survey', requireAuth, requirePermission('can_process'), (req, r
 });
 
 // PUT /api/tasks/:id/process - 更新处理进度
-router.put('/:id/process', requireAuth, requirePermission('can_edit'), (req, res) => {
+router.put('/:id/process', requireAuth, requirePermission('can_process'), (req, res) => {
   try {
     const { taskQueries, logQueries } = getQueries();
     const task = taskQueries.getById(req.params.id);

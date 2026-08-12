@@ -148,7 +148,7 @@ async function initDatabase() {
       purchase_info TEXT DEFAULT '',
       contact_person TEXT DEFAULT '',
       survey_status TEXT DEFAULT 'not_surveyed' CHECK(survey_status IN ('not_surveyed', 'surveyed')),
-      process_status TEXT DEFAULT '' CHECK(process_status IN ('', 'pending', 'resurvey', 'missing_docs', 'submitted')),
+      process_status TEXT CHECK(process_status IN ('pending', 'resurvey', 'missing_docs', 'submitted')),
       created_by INTEGER NOT NULL,
       assigned_to INTEGER,
       created_at TEXT DEFAULT (datetime('now')),
@@ -375,11 +375,10 @@ function createQueries() {
         if (filters.village_id) { conditions.push('t.village_id = ?'); params.push(filters.village_id); }
         if (filters.created_by) { conditions.push('t.created_by = ?'); params.push(filters.created_by); }
         if (filters.keyword) { conditions.push('(t.title LIKE ? OR t.address LIKE ?)'); params.push(`%${filters.keyword}%`, `%${filters.keyword}%`); }
-        // 任务分类过滤：pending_survey=待查勘, processing=处理中(已查勘且未提交), completed=已完成(已归档)
         if (filters.task_category === 'pending_survey') {
           conditions.push("t.survey_status = 'not_surveyed'");
         } else if (filters.task_category === 'processing') {
-          conditions.push("t.survey_status = 'surveyed' AND (t.process_status IS NULL OR t.process_status = '' OR t.process_status != 'submitted')");
+          conditions.push("t.survey_status = 'surveyed' AND (t.process_status IS NULL OR t.process_status != 'submitted')");
         }
         // completed分类已通过is_archived主条件处理
 
@@ -408,11 +407,10 @@ function createQueries() {
         if (filters.village_id) { conditions.push('village_id = ?'); params.push(filters.village_id); }
         if (filters.created_by) { conditions.push('created_by = ?'); params.push(filters.created_by); }
         if (filters.keyword) { conditions.push('(title LIKE ? OR address LIKE ?)'); params.push(`%${filters.keyword}%`, `%${filters.keyword}%`); }
-        // 任务分类过滤
         if (filters.task_category === 'pending_survey') {
           conditions.push("survey_status = 'not_surveyed'");
         } else if (filters.task_category === 'processing') {
-          conditions.push("survey_status = 'surveyed' AND (process_status IS NULL OR process_status = '' OR process_status != 'submitted')");
+          conditions.push("survey_status = 'surveyed' AND (process_status IS NULL OR process_status != 'submitted')");
         }
         // completed分类已通过is_archived主条件处理
 
@@ -437,7 +435,7 @@ function createQueries() {
 
       create: (...params) => db.prepare(`
         INSERT INTO tasks (title, publish_time, tag, village_id, address, contact_person, contact_phone, purchase_info, remark, insurance_id, survey_status, process_status, created_by, assigned_to)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'not_surveyed', '', ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'not_surveyed', NULL, ?, ?)
       `).run(...params),
 
       update: (...params) => db.prepare(`

@@ -408,8 +408,8 @@
         html += '<button class="btn btn-primary" onclick="openSurveyModal()">更新查勘状态</button>';
       }
 
-      // 只有已查勘状态才显示处理状态按钮
-      if (task.survey_status === 'surveyed' && App.hasPermission(currentUser, 'can_edit')) {
+      // 只有已查勘状态且有处理权限才显示处理状态按钮
+      if (task.survey_status === 'surveyed' && App.hasPermission(currentUser, 'can_process')) {
         html += '<button class="btn btn-warning" onclick="openProcessModal()">更新处理状态</button>';
       }
 
