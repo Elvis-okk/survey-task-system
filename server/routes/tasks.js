@@ -106,10 +106,19 @@ router.get('/', requireAuth, (req, res) => {
 // POST /api/tasks - 发布新任务
 router.post('/', requireAuth, requirePermission('can_publish'), (req, res) => {
   try {
-    const { title, publish_time, tag, village_id, address, contact_person, contact_phone, purchase_info, remark, insurance_id, assigned_to } = req.body;
+    const { title, publish_time, tag, village_id, address, contact_person, contact_phone, purchase_info, remark, insurance_id, assigned_to, has_harmony } = req.body;
 
     if (!publish_time) {
       return res.json({ code: 400, data: null, message: '发布时间不能为空' });
+    }
+    if (!assigned_to) {
+      return res.json({ code: 400, data: null, message: '请指派查勘员' });
+    }
+    if (!address || !address.trim()) {
+      return res.json({ code: 400, data: null, message: '请填写详细地址' });
+    }
+    if (!contact_phone || !contact_phone.trim()) {
+      return res.json({ code: 400, data: null, message: '请填写联系电话' });
     }
 
     const { taskQueries, logQueries, villageQueries } = getQueries();
@@ -134,6 +143,7 @@ router.post('/', requireAuth, requirePermission('can_publish'), (req, res) => {
       purchase_info || '',
       remark || '',
       insurance_id || null,
+      has_harmony ? 1 : 0,
       req.user.id,
       assigneeId
     );
@@ -183,7 +193,7 @@ router.put('/:id', requireAuth, (req, res) => {
       return res.json({ code: 403, data: null, message: '只能修改自己发布的任务' });
     }
 
-    const { title, publish_time, tag, village_id, address, contact_person, contact_phone, purchase_info, remark, insurance_id, assigned_to } = req.body;
+    const { title, publish_time, tag, village_id, address, contact_person, contact_phone, purchase_info, remark, insurance_id, assigned_to, has_harmony } = req.body;
 
     taskQueries.update(
       title !== undefined ? title : task.title,
@@ -196,6 +206,7 @@ router.put('/:id', requireAuth, (req, res) => {
       purchase_info !== undefined ? purchase_info : task.purchase_info,
       remark !== undefined ? remark : task.remark,
       insurance_id !== undefined ? insurance_id : task.insurance_id,
+      has_harmony !== undefined ? (has_harmony ? 1 : 0) : task.has_harmony,
       req.params.id
     );
 

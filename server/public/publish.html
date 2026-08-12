@@ -27,9 +27,9 @@
             </select>
           </div>
           <div class="form-group">
-            <label class="form-label">指派查勘员</label>
-            <select id="assignedTo" class="form-control">
-              <option value="">不指派</option>
+            <label class="form-label">指派查勘员 <span class="text-danger">*</span></label>
+            <select id="assignedTo" class="form-control" required>
+              <option value="">请选择查勘员</option>
             </select>
           </div>
         </div>
@@ -53,6 +53,11 @@
             </select>
           </div>
           <div class="form-group">
+            <label class="form-label">有否买和谐</label>
+            <select id="hasHarmony" class="form-control">
+              <option value="0">否</option>
+              <option value="1">是</option>
+            </select>
           </div>
         </div>
       </div>
@@ -61,16 +66,16 @@
       <div class="form-section">
         <h3 class="form-section-title">联系信息</h3>
         <div class="form-group">
-          <label class="form-label">详细地址</label>
-          <input type="text" id="address" class="form-control" placeholder="请输入详细地址" maxlength="200">
+          <label class="form-label">详细地址 <span class="text-danger">*</span></label>
+          <input type="text" id="address" class="form-control" placeholder="请输入详细地址" maxlength="200" required>
         </div>
         <div class="form-group">
           <label class="form-label">联系人</label>
           <input type="text" id="contactPerson" class="form-control" placeholder="请输入联系人姓名" maxlength="50">
         </div>
         <div class="form-group">
-          <label class="form-label">联系电话</label>
-          <input type="tel" id="contactPhone" class="form-control" placeholder="请输入联系电话" maxlength="20">
+          <label class="form-label">联系电话 <span class="text-danger">*</span></label>
+          <input type="tel" id="contactPhone" class="form-control" placeholder="请输入联系电话" maxlength="20" required>
         </div>
       </div>
 
@@ -137,7 +142,7 @@
 
         // 查勘员
         const assignedSelect = document.getElementById('assignedTo');
-        assignedSelect.innerHTML = '<option value="">不指派</option>';
+        assignedSelect.innerHTML = '<option value="">请选择查勘员</option>';
         surveyors.forEach(u => {
           const opt = document.createElement('option');
           opt.value = u.id;
@@ -212,9 +217,13 @@
       const contactPhone = document.getElementById('contactPhone').value.trim();
       const remark = document.getElementById('remark').value.trim();
       const insuranceId = document.getElementById('insurance').value;
+      const hasHarmony = document.getElementById('hasHarmony').value;
 
       // 验证
       if (!villageId) { App.showToast('请选择所属村庄', 'warning'); return; }
+      if (!assignedTo) { App.showToast('请选择查勘员', 'warning'); return; }
+      if (!address) { App.showToast('请填写详细地址', 'warning'); return; }
+      if (!contactPhone) { App.showToast('请填写联系电话', 'warning'); return; }
 
       const submitBtn = document.getElementById('submitBtn');
       const btnText = document.getElementById('btnText');
@@ -237,6 +246,7 @@
         if (publishTime) taskData.publish_time = publishTime;
         if (assignedTo) taskData.assigned_to = parseInt(assignedTo);
         if (insuranceId) taskData.insurance_id = parseInt(insuranceId);
+        taskData.has_harmony = parseInt(hasHarmony) || 0;
 
         await App.tasks.create(taskData);
         App.showToast('任务发布成功', 'success');

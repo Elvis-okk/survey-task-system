@@ -149,6 +149,7 @@ async function initDatabase() {
       contact_person TEXT DEFAULT '',
       survey_status TEXT DEFAULT 'not_surveyed' CHECK(survey_status IN ('not_surveyed', 'surveyed')),
       process_status TEXT CHECK(process_status IN ('pending', 'resurvey', 'missing_docs', 'submitted')),
+      has_harmony INTEGER DEFAULT 0,
       created_by INTEGER NOT NULL,
       assigned_to INTEGER,
       created_at TEXT DEFAULT (datetime('now')),
@@ -208,7 +209,8 @@ async function initDatabase() {
     { table: 'users', column: 'can_publish', type: 'INTEGER DEFAULT 0' },
     { table: 'users', column: 'can_edit', type: 'INTEGER DEFAULT 0' },
     { table: 'users', column: 'can_process', type: 'INTEGER DEFAULT 0' },
-    { table: 'tasks', column: 'contact_person', type: "TEXT DEFAULT ''" }
+    { table: 'tasks', column: 'contact_person', type: "TEXT DEFAULT ''" },
+    { table: 'tasks', column: 'has_harmony', type: 'INTEGER DEFAULT 0' }
   ];
   for (const col of columnsToAdd) {
     try {
@@ -434,12 +436,12 @@ function createQueries() {
       `).get(id),
 
       create: (...params) => db.prepare(`
-        INSERT INTO tasks (title, publish_time, tag, village_id, address, contact_person, contact_phone, purchase_info, remark, insurance_id, survey_status, process_status, created_by, assigned_to)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'not_surveyed', NULL, ?, ?)
+        INSERT INTO tasks (title, publish_time, tag, village_id, address, contact_person, contact_phone, purchase_info, remark, insurance_id, has_harmony, survey_status, process_status, created_by, assigned_to)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'not_surveyed', NULL, ?, ?)
       `).run(...params),
 
       update: (...params) => db.prepare(`
-        UPDATE tasks SET title = ?, publish_time = ?, tag = ?, village_id = ?, address = ?, contact_person = ?, contact_phone = ?, purchase_info = ?, remark = ?, insurance_id = ?, updated_at = datetime('now')
+        UPDATE tasks SET title = ?, publish_time = ?, tag = ?, village_id = ?, address = ?, contact_person = ?, contact_phone = ?, purchase_info = ?, remark = ?, insurance_id = ?, has_harmony = ?, updated_at = datetime('now')
         WHERE id = ?
       `).run(...params),
 
