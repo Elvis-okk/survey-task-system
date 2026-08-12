@@ -138,8 +138,17 @@
     // 加载统计数据
     async function loadStats() {
       try {
-        const userId = showMyTasks ? currentUser.id : null;
-        const stats = await App.tasks.stats(userId);
+        let filters = {};
+        if (showMyTasks) {
+          if (role === 'surveyor') {
+            filters = { assigned_to: currentUser.id };
+          } else if (role === 'publisher') {
+            filters = { created_by: currentUser.id };
+          } else if (role === 'admin') {
+            filters = { user_id: currentUser.id };
+          }
+        }
+        const stats = await App.tasks.stats(filters);
         document.getElementById('statTotal').textContent = stats.total || 0;
         document.getElementById('statPendingSurvey').textContent = stats.not_surveyed || 0;
         document.getElementById('statProcessing').textContent = (stats.pending || 0) + (stats.resurvey || 0) + (stats.missing_docs || 0);

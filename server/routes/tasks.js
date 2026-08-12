@@ -19,8 +19,14 @@ function broadcastTaskChange(io, event, data) {
 router.get('/stats', requireAuth, (req, res) => {
   try {
     const { taskQueries } = getQueries();
-    const userId = req.query.user_id ? parseInt(req.query.user_id) : null;
-    const stats = taskQueries.getStats(userId);
+    const filters = {};
+    
+    // 支持按角色分开过滤
+    if (req.query.assigned_to) filters.assigned_to = parseInt(req.query.assigned_to);
+    if (req.query.created_by) filters.created_by = parseInt(req.query.created_by);
+    if (req.query.user_id) filters.user_id = parseInt(req.query.user_id);
+    
+    const stats = taskQueries.getStats(filters);
     res.json({ code: 0, data: stats, message: '' });
   } catch (err) {
     console.error('获取统计数据错误:', err);
@@ -282,8 +288,8 @@ router.put('/:id/process', requireAuth, requirePermission('can_process'), (req, 
   }
 });
 
-// PUT /api/tasks/:id/reassign - 改派负责人
-router.put('/:id/reassign', requireAuth, requireRole('admin'), (req, res) => {
+// PUT /api/tasks/:id/reassign - 转移任务
+router.put('/:id/reassign', requireAuth, (req, res) => {
   try {
     const { taskQueries, logQueries } = getQueries();
     const task = taskQueries.getById(req.params.id);
@@ -304,9 +310,9 @@ router.put('/:id/reassign', requireAuth, requireRole('admin'), (req, res) => {
     const io = getIo(req);
     broadcastTaskChange(io, 'task_reassigned', { id: parseInt(req.params.id), assigned_to });
 
-    res.json({ code: 0, data: null, message: '负责人改派成功' });
+    res.json({ code: 0, data: null, message: '任务转移成功' });
   } catch (err) {
-    console.error('改派负责人错误:', err);
+    console.error('转移任务错误:', err);
     res.json({ code: 500, data: null, message: '服务器错误' });
   }
 });

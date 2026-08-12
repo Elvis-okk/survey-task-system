@@ -130,10 +130,8 @@ const App = {
       const query = new URLSearchParams(params).toString();
       return App.get(`/api/tasks/completed${query ? '?' + query : ''}`);
     },
-    stats(userId) {
-      const params = {};
-      if (userId) params.user_id = userId;
-      const query = new URLSearchParams(params).toString();
+    stats(filters = {}) {
+      const query = new URLSearchParams(filters).toString();
       return App.get(`/api/tasks/stats${query ? '?' + query : ''}`);
     }
   },

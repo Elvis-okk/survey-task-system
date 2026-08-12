@@ -103,6 +103,14 @@
             <option value="">全部标签</option>
           </select>
         </div>
+        <div class="filter-item" id="processStatusFilter" style="display:none">
+          <select id="filterProcessStatus" class="form-control">
+            <option value="">全部处理状态</option>
+            <option value="pending">待处理</option>
+            <option value="resurvey">需复勘</option>
+            <option value="missing_docs">缺资料</option>
+          </select>
+        </div>
         <div class="filter-item">
           <button class="btn btn-secondary btn-sm" onclick="resetFilters()">重置</button>
         </div>
@@ -148,6 +156,8 @@
       document.querySelectorAll('.tab-item').forEach(el => {
         el.classList.toggle('active', el.dataset.tab === tab);
       });
+      // 处理中Tab显示处理状态筛选
+      document.getElementById('processStatusFilter').style.display = tab === 'processing' ? '' : 'none';
       currentPage = 1;
       loadTasks();
     }
@@ -240,6 +250,12 @@
 
       const tag = document.getElementById('filterTag').value;
       if (tag) params.tag = tag;
+
+      // 处理中Tab的处理状态筛选
+      const processStatus = document.getElementById('filterProcessStatus').value;
+      if (currentTab === 'processing' && processStatus) {
+        params.process_status = processStatus;
+      }
 
       // 任务过滤：我的任务 vs 全部任务
       if (showMyTasks) {
@@ -353,6 +369,7 @@
     function resetFilters() {
       document.getElementById('filterVillage').value = '';
       document.getElementById('filterTag').value = '';
+      document.getElementById('filterProcessStatus').value = '';
       currentPage = 1;
       loadTasks();
     }
@@ -360,6 +377,7 @@
     // 事件监听
     document.getElementById('filterVillage').addEventListener('change', () => { currentPage = 1; loadTasks(); });
     document.getElementById('filterTag').addEventListener('change', () => { currentPage = 1; loadTasks(); });
+    document.getElementById('filterProcessStatus').addEventListener('change', () => { currentPage = 1; loadTasks(); });
 
     // 初始化
     initFromUrl();

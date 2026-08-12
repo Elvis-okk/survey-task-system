@@ -184,10 +184,10 @@
         renderVillageOptions(cachedVillages);
         return;
       }
-      const surveyor = cachedSurveyors.find(u => u.id === userId);
+      const surveyor = cachedSurveyors.find(u => Number(u.id) === Number(userId));
       if (surveyor && surveyor.village_id) {
         // 只显示该查勘员所属村庄
-        const filteredVillages = cachedVillages.filter(v => v.id === surveyor.village_id);
+        const filteredVillages = cachedVillages.filter(v => Number(v.id) === Number(surveyor.village_id));
         renderVillageOptions(filteredVillages);
         villageSelect.value = String(surveyor.village_id);
       } else {

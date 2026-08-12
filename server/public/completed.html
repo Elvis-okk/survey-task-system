@@ -18,9 +18,6 @@
     <div class="card filter-card">
       <div class="filter-bar">
         <div class="filter-item">
-          <input type="text" id="searchInput" class="form-control" placeholder="搜索任务标题...">
-        </div>
-        <div class="filter-item">
           <select id="filterVillage" class="form-control">
             <option value="">全部村庄</option>
           </select>
@@ -59,7 +56,6 @@
     let currentPage = 1;
     const pageSize = 10;
     let totalPages = 1;
-    let searchTimer = null;
 
     // 加载筛选选项
     async function loadFilterOptions() {
@@ -87,9 +83,6 @@
           page: currentPage,
           pageSize
         };
-
-        const search = document.getElementById('searchInput').value.trim();
-        if (search) params.keyword = search;
 
         const villageId = document.getElementById('filterVillage').value;
         if (villageId) params.village_id = parseInt(villageId);
@@ -123,7 +116,7 @@
               <div class="task-card-info">
                 <span>📍 ${escapeHtml(task.village_name || task.address || '未指定')}</span>
                 <span>📅 ${App.formatDateShort(task.publish_time || task.created_at)}</span>
-                ${task.assigned_to ? `<span>👤 ${App.getUserName(task.assigned_to)}</span>` : ''}
+                                ${task.assignee_name ? `<span>👤 ${escapeHtml(task.assignee_name)}</span>` : ''}
               </div>
                             ${App.taskTagBadge(task)}
             </div>
@@ -174,17 +167,12 @@
     }
 
     function resetFilters() {
-      document.getElementById('searchInput').value = '';
       document.getElementById('filterVillage').value = '';
       currentPage = 1;
       loadCompleted();
     }
 
     // 事件
-    document.getElementById('searchInput').addEventListener('input', () => {
-      clearTimeout(searchTimer);
-      searchTimer = setTimeout(() => { currentPage = 1; loadCompleted(); }, 300);
-    });
     document.getElementById('filterVillage').addEventListener('change', () => { currentPage = 1; loadCompleted(); });
 
     // 初始化

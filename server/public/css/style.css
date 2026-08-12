@@ -669,7 +669,7 @@ select.form-control {
 
 .task-card .task-title {
   font-weight: 600;
-  font-size: 0.95rem;
+  font-size: 1.05rem;
   color: var(--text-primary);
   flex: 1;
   min-width: 0;
@@ -689,7 +689,7 @@ select.form-control {
 
 .task-card-title {
   font-weight: 600;
-  font-size: 0.95rem;
+  font-size: 1.05rem;
   color: var(--text-primary);
   flex: 1;
   min-width: 0;
@@ -706,7 +706,7 @@ select.form-control {
   display: flex;
   flex-wrap: wrap;
   gap: 12px;
-  font-size: 0.8rem;
+  font-size: 0.9rem;
   color: var(--text-secondary);
   margin-bottom: 6px;
 }
@@ -912,7 +912,7 @@ select.form-control {
 }
 
 .detail-header h2 {
-  font-size: 1.2rem;
+  font-size: 1.3rem;
   font-weight: 700;
   margin-bottom: 10px;
 }
@@ -934,7 +934,7 @@ select.form-control {
 }
 
 .detail-section h4 {
-  font-size: 0.85rem;
+  font-size: 0.95rem;
   font-weight: 600;
   color: var(--primary);
   margin-bottom: 10px;
@@ -947,19 +947,21 @@ select.form-control {
   justify-content: space-between;
   align-items: flex-start;
   padding: 6px 0;
-  font-size: 0.875rem;
+  font-size: 0.95rem;
 }
 
 .detail-label {
   color: var(--text-secondary);
   flex-shrink: 0;
   margin-right: 12px;
+  font-size: 0.95rem;
 }
 
 .detail-value {
   color: var(--text-primary);
   text-align: right;
   word-break: break-word;
+  font-size: 0.95rem;
 }
 
 .detail-value a {
@@ -967,7 +969,7 @@ select.form-control {
 }
 
 .detail-remark {
-  font-size: 0.875rem;
+  font-size: 0.95rem;
   color: var(--text-secondary);
   line-height: 1.6;
   padding: 8px 12px;
@@ -1849,7 +1851,7 @@ select.form-control {
   padding: 14px 20px;
   border-bottom: 1px solid var(--border-light);
   font-weight: 600;
-  font-size: 0.95rem;
+  font-size: 1.05rem;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -1872,14 +1874,14 @@ select.form-control {
 .detail-row .detail-label {
   width: 120px;
   flex-shrink: 0;
-  font-size: 0.85rem;
+  font-size: 0.95rem;
   color: var(--text-secondary);
   font-weight: 500;
 }
 
 .detail-row .detail-value {
   flex: 1;
-  font-size: 0.85rem;
+  font-size: 0.95rem;
   color: var(--text-primary);
   word-break: break-all;
 }

@@ -383,7 +383,7 @@ function createQueries() {
         // completed分类已通过is_archived主条件处理
 
         if (conditions.length > 0) sql += ' AND ' + conditions.join(' AND ');
-        sql += ' ORDER BY t.publish_time DESC';
+        sql += ' ORDER BY t.publish_time ASC';
 
         const page = parseInt(filters.page) || 1;
         const limit = parseInt(filters.limit) || 20;
@@ -492,9 +492,24 @@ function createQueries() {
         return db.prepare(sql).get(...params).total;
       },
 
-      getStats: (userId) => {
-        const whereClause = userId ? `WHERE (assigned_to = ? OR created_by = ?)` : '';
-        const params = userId ? [userId, userId] : [];
+      getStats: (filters) => {
+        let whereClause = 'WHERE 1=1';
+        const params = [];
+        
+        if (filters && filters.assigned_to) {
+          whereClause += ' AND assigned_to = ?';
+          params.push(filters.assigned_to);
+        }
+        if (filters && filters.created_by) {
+          whereClause += ' AND created_by = ?';
+          params.push(filters.created_by);
+        }
+        if (filters && filters.user_id) {
+          // 兼容旧逻辑：显示与用户相关的所有任务
+          whereClause += ' AND (assigned_to = ? OR created_by = ?)';
+          params.push(filters.user_id, filters.user_id);
+        }
+        
         const stmt = db.prepare(`
           SELECT
             COUNT(*) as total,
