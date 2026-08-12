@@ -78,7 +78,10 @@ jobs:
           EOF
       - name: Build APK
         working-directory: android
-        run: chmod +x gradlew && ./gradlew assembleRelease
+        run: |
+          sed -i 's/\r$//' gradlew
+          chmod +x gradlew
+          ./gradlew assembleRelease
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
