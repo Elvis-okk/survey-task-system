@@ -144,6 +144,12 @@ const App = {
       create(data) { return App.post('/api/settings/villages', data); },
       update(id, data) { return App.put(`/api/settings/villages/${id}`, data); },
       delete(id) { return App.delete(`/api/settings/villages/${id}`); }
+    },
+    insurances: {
+      list() { return App.get('/api/settings/insurances'); },
+      create(data) { return App.post('/api/settings/insurances', data); },
+      update(id, data) { return App.put(`/api/settings/insurances/${id}`, data); },
+      delete(id) { return App.delete(`/api/settings/insurances/${id}`); }
     }
   },
 
@@ -415,6 +421,7 @@ const App = {
   _cachedTags: null,
   _cachedVillages: null,
   _cachedUsers: null,
+  _cachedInsurances: null,
 
   async loadTags() {
     if (this._cachedTags) return this._cachedTags;
@@ -452,10 +459,23 @@ const App = {
     }
   },
 
+  async loadInsurances() {
+    if (this._cachedInsurances) return this._cachedInsurances;
+    try {
+      const data = await this.settings.insurances.list();
+      this._cachedInsurances = data;
+      return data;
+    } catch (e) {
+      console.error('加载出险情况失败:', e);
+      return [];
+    }
+  },
+
   clearCache() {
     this._cachedTags = null;
     this._cachedVillages = null;
     this._cachedUsers = null;
+    this._cachedInsurances = null;
   },
 
   // ========== 生成下拉选项 ==========
@@ -467,6 +487,11 @@ const App = {
   villageOptions(villages, selectedId) {
     return `<option value="">全部村/社区</option>` +
       villages.map(v => `<option value="${v.id}" ${String(v.id) === String(selectedId) ? 'selected' : ''}>${v.name}</option>`).join('');
+  },
+
+  insuranceOptions(insurances, selectedId) {
+    return `<option value="">请选择出险情况</option>` +
+      insurances.map(i => `<option value="${i.id}" ${String(i.id) === String(selectedId) ? 'selected' : ''}>${i.name}</option>`).join('');
   },
 
   userOptions(users, selectedId) {

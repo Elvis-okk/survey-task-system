@@ -180,4 +180,79 @@ router.delete('/villages/:id', requireAuth, requireRole('admin'), (req, res) => 
   }
 });
 
+// GET /api/settings/insurances - 获取出险情况列表
+router.get('/insurances', requireAuth, (req, res) => {
+  try {
+    const { insuranceQueries } = getQueries();
+    const insurances = insuranceQueries.getAll();
+    res.json({ code: 0, data: insurances, message: '' });
+  } catch (err) {
+    console.error('获取出险情况错误:', err);
+    res.json({ code: 500, data: null, message: '服务器错误' });
+  }
+});
+
+// POST /api/settings/insurances - 创建出险情况（管理员）
+router.post('/insurances', requireAuth, requireRole('admin'), (req, res) => {
+  try {
+    const { name, description } = req.body;
+
+    if (!name) {
+      return res.json({ code: 400, data: null, message: '出险情况名称不能为空' });
+    }
+
+    const { insuranceQueries } = getQueries();
+    const result = insuranceQueries.create(name, description || '');
+
+    res.json({ code: 0, data: { id: result.lastInsertRowid }, message: '出险情况创建成功' });
+  } catch (err) {
+    if (err.message && err.message.includes('UNIQUE')) {
+      return res.json({ code: 400, data: null, message: '出险情况名称已存在' });
+    }
+    console.error('创建出险情况错误:', err);
+    res.json({ code: 500, data: null, message: '服务器错误' });
+  }
+});
+
+// PUT /api/settings/insurances/:id - 更新出险情况（管理员）
+router.put('/insurances/:id', requireAuth, requireRole('admin'), (req, res) => {
+  try {
+    const { id } = req.params;
+    const { name, description } = req.body;
+
+    const { insuranceQueries } = getQueries();
+    const insurance = insuranceQueries.getById(id);
+    if (!insurance) {
+      return res.json({ code: 404, data: null, message: '出险情况不存在' });
+    }
+
+    insuranceQueries.update(name || insurance.name, description !== undefined ? description : insurance.description, id);
+
+    res.json({ code: 0, data: null, message: '出险情况更新成功' });
+  } catch (err) {
+    console.error('更新出险情况错误:', err);
+    res.json({ code: 500, data: null, message: '服务器错误' });
+  }
+});
+
+// DELETE /api/settings/insurances/:id - 删除出险情况（管理员）
+router.delete('/insurances/:id', requireAuth, requireRole('admin'), (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const { insuranceQueries } = getQueries();
+    const insurance = insuranceQueries.getById(id);
+    if (!insurance) {
+      return res.json({ code: 404, data: null, message: '出险情况不存在' });
+    }
+
+    insuranceQueries.delete(id);
+
+    res.json({ code: 0, data: null, message: '出险情况删除成功' });
+  } catch (err) {
+    console.error('删除出险情况错误:', err);
+    res.json({ code: 500, data: null, message: '服务器错误' });
+  }
+});
+
 module.exports = router;

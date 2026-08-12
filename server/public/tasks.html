@@ -185,6 +185,7 @@
               <div class="task-card-info">
                 <span>📍 ${escapeHtml(task.village_name || task.address || '未指定')}</span>
                 <span>📅 ${App.formatDateShort(task.publish_time || task.created_at)}</span>
+                ${task.insurance_name ? `<span>⚠️ ${escapeHtml(task.insurance_name)}</span>` : ''}
                 ${task.assigned_to ? `<span>👤 ${App.getUserName(task.assigned_to)}</span>` : ''}
               </div>
                             ${App.taskTagBadge(task)}

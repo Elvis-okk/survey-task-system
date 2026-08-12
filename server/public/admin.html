@@ -19,6 +19,7 @@
       <button class="tab active" onclick="switchTab('users')">用户管理</button>
       <button class="tab" onclick="switchTab('tags')">标签管理</button>
       <button class="tab" onclick="switchTab('villages')">村庄管理</button>
+      <button class="tab" onclick="switchTab('insurances')">出险情况</button>
     </div>
 
     <!-- 用户管理 -->
@@ -98,12 +99,36 @@
         </div>
       </div>
     </div>
+
+    <!-- 出险情况管理 -->
+    <div id="tab-insurances" class="tab-content">
+      <div class="section-header">
+        <h3>出险情况列表</h3>
+        <button class="btn btn-primary btn-sm" onclick="openInsuranceModal()">+ 添加出险情况</button>
+      </div>
+      <div class="card">
+        <div class="table-responsive">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>名称</th>
+                <th>描述</th>
+                <th>操作</th>
+              </tr>
+            </thead>
+            <tbody id="insuranceTableBody">
+              <tr><td colspan="4"><div class="loading-spinner"></div></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
   </div>
 
   <!-- 用户弹窗 -->
-  <div id="userModal" class="modal" style="display:none">
-    <div class="modal-overlay" onclick="closeUserModal()"></div>
-    <div class="modal-content">
+  <div id="userModal" class="modal-overlay" style="display:none" onclick="closeUserModal()">
+    <div class="modal" onclick="event.stopPropagation()">
       <div class="modal-header">
         <h3 id="userModalTitle">添加用户</h3>
         <button class="modal-close" onclick="closeUserModal()">&times;</button>
@@ -139,9 +164,8 @@
   </div>
 
   <!-- 标签弹窗 -->
-  <div id="tagModal" class="modal" style="display:none">
-    <div class="modal-overlay" onclick="closeTagModal()"></div>
-    <div class="modal-content">
+  <div id="tagModal" class="modal-overlay" style="display:none" onclick="closeTagModal()">
+    <div class="modal" onclick="event.stopPropagation()">
       <div class="modal-header">
         <h3 id="tagModalTitle">添加标签</h3>
         <button class="modal-close" onclick="closeTagModal()">&times;</button>
@@ -165,9 +189,8 @@
   </div>
 
   <!-- 村庄弹窗 -->
-  <div id="villageModal" class="modal" style="display:none">
-    <div class="modal-overlay" onclick="closeVillageModal()"></div>
-    <div class="modal-content">
+  <div id="villageModal" class="modal-overlay" style="display:none" onclick="closeVillageModal()">
+    <div class="modal" onclick="event.stopPropagation()">
       <div class="modal-header">
         <h3 id="villageModalTitle">添加村庄</h3>
         <button class="modal-close" onclick="closeVillageModal()">&times;</button>
@@ -194,6 +217,31 @@
     </div>
   </div>
 
+  <!-- 出险情况弹窗 -->
+  <div id="insuranceModal" class="modal-overlay" style="display:none" onclick="closeInsuranceModal()">
+    <div class="modal" onclick="event.stopPropagation()">
+      <div class="modal-header">
+        <h3 id="insuranceModalTitle">添加出险情况</h3>
+        <button class="modal-close" onclick="closeInsuranceModal()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="editInsuranceId">
+        <div class="form-group">
+          <label class="form-label">名称 <span class="text-danger">*</span></label>
+          <input type="text" id="insuranceName" class="form-control" placeholder="请输入出险情况名称" maxlength="30">
+        </div>
+        <div class="form-group">
+          <label class="form-label">描述</label>
+          <input type="text" id="insuranceDesc" class="form-control" placeholder="请输入描述（可选）" maxlength="100">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeInsuranceModal()">取消</button>
+        <button class="btn btn-primary" onclick="submitInsurance()">确认</button>
+      </div>
+    </div>
+  </div>
+
   <div id="bottomNav"></div>
 
   <script src="js/app.js"></script>
@@ -216,6 +264,7 @@
       if (tab === 'users') loadUsers();
       else if (tab === 'tags') loadTags();
       else if (tab === 'villages') loadVillages();
+      else if (tab === 'insurances') loadInsurances();
     }
 
     // ========== 用户管理 ==========
@@ -503,6 +552,94 @@
         await App.settings.villages.delete(id);
         App.showToast('村庄已删除', 'success');
         loadVillages();
+        App.clearCache();
+      } catch (e) {
+        App.showToast(e.message || '删除失败', 'error');
+      }
+    }
+
+    // ========== 出险情况管理 ==========
+    async function loadInsurances() {
+      const tbody = document.getElementById('insuranceTableBody');
+      try {
+        const insurances = await App.settings.insurances.list();
+        if (insurances.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted">暂无出险情况</td></tr>';
+          return;
+        }
+        tbody.innerHTML = insurances.map(i => `
+          <tr>
+            <td>${i.id}</td>
+            <td>${escapeHtml(i.name)}</td>
+            <td>${escapeHtml(i.description || '-')}</td>
+            <td>
+              <button class="btn btn-sm btn-secondary" onclick="editInsurance(${i.id})">编辑</button>
+              <button class="btn btn-sm btn-danger" onclick="deleteInsurance(${i.id})">删除</button>
+            </td>
+          </tr>
+        `).join('');
+      } catch (e) {
+        tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted">加载失败</td></tr>';
+      }
+    }
+
+    function openInsuranceModal() {
+      document.getElementById('editInsuranceId').value = '';
+      document.getElementById('insuranceName').value = '';
+      document.getElementById('insuranceDesc').value = '';
+      document.getElementById('insuranceModalTitle').textContent = '添加出险情况';
+      document.getElementById('insuranceModal').style.display = '';
+    }
+
+    async function editInsurance(id) {
+      try {
+        const insurances = await App.settings.insurances.list();
+        const insurance = insurances.find(i => i.id === id);
+        if (!insurance) return;
+        document.getElementById('editInsuranceId').value = insurance.id;
+        document.getElementById('insuranceName').value = insurance.name;
+        document.getElementById('insuranceDesc').value = insurance.description || '';
+        document.getElementById('insuranceModalTitle').textContent = '编辑出险情况';
+        document.getElementById('insuranceModal').style.display = '';
+      } catch (e) {
+        App.showToast('加载出险情况信息失败', 'error');
+      }
+    }
+
+    function closeInsuranceModal() {
+      document.getElementById('insuranceModal').style.display = 'none';
+    }
+
+    async function submitInsurance() {
+      const editId = document.getElementById('editInsuranceId').value;
+      const name = document.getElementById('insuranceName').value.trim();
+      const description = document.getElementById('insuranceDesc').value.trim();
+
+      if (!name) { App.showToast('请输入出险情况名称', 'warning'); return; }
+
+      try {
+        if (editId) {
+          await App.settings.insurances.update(editId, { name, description });
+          App.showToast('出险情况更新成功', 'success');
+        } else {
+          await App.settings.insurances.create({ name, description });
+          App.showToast('出险情况创建成功', 'success');
+        }
+        closeInsuranceModal();
+        loadInsurances();
+        App.clearCache();
+      } catch (e) {
+        App.showToast(e.message || '操作失败', 'error');
+      }
+    }
+
+    async function deleteInsurance(id) {
+      const confirmed = await App.showConfirm('确定删除该出险情况吗？');
+      if (!confirmed) return;
+      try {
+        await App.settings.insurances.delete(id);
+        App.showToast('出险情况已删除', 'success');
+        loadInsurances();
         App.clearCache();
       } catch (e) {
         App.showToast(e.message || '删除失败', 'error');

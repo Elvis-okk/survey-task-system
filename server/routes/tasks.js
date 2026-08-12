@@ -98,7 +98,7 @@ router.get('/', requireAuth, (req, res) => {
 // POST /api/tasks - 发布新任务
 router.post('/', requireAuth, (req, res) => {
   try {
-    const { title, publish_time, tag, village_id, address, contact_phone, purchase_info, remark, assigned_to } = req.body;
+    const { title, publish_time, tag, village_id, address, contact_phone, purchase_info, remark, insurance_id, assigned_to } = req.body;
 
     if (!publish_time) {
       return res.json({ code: 400, data: null, message: '发布时间不能为空' });
@@ -124,6 +124,7 @@ router.post('/', requireAuth, (req, res) => {
       contact_phone || '',
       purchase_info || '',
       remark || '',
+      insurance_id || null,
       req.user.id,
       assigneeId
     );
@@ -173,7 +174,7 @@ router.put('/:id', requireAuth, (req, res) => {
       return res.json({ code: 403, data: null, message: '只能修改自己发布的任务' });
     }
 
-    const { title, publish_time, tag, village_id, address, contact_phone, purchase_info, remark } = req.body;
+    const { title, publish_time, tag, village_id, address, contact_phone, purchase_info, remark, insurance_id } = req.body;
 
     taskQueries.update(
       title !== undefined ? title : task.title,
@@ -184,6 +185,7 @@ router.put('/:id', requireAuth, (req, res) => {
       contact_phone !== undefined ? contact_phone : task.contact_phone,
       purchase_info !== undefined ? purchase_info : task.purchase_info,
       remark !== undefined ? remark : task.remark,
+      insurance_id !== undefined ? insurance_id : task.insurance_id,
       req.params.id
     );
 

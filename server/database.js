@@ -187,6 +187,13 @@ async function initDatabase() {
       color TEXT DEFAULT '#3B82F6',
       created_at TEXT DEFAULT (datetime('now'))
     );
+
+    CREATE TABLE IF NOT EXISTS insurance_cases (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT UNIQUE NOT NULL,
+      description TEXT DEFAULT '',
+      created_at TEXT DEFAULT (datetime('now'))
+    );
   `);
 
   // 为已有数据库添加新列（如果不存在）
@@ -194,6 +201,7 @@ async function initDatabase() {
     { table: 'tasks', column: 'remark', type: 'TEXT DEFAULT \'\'' },
     { table: 'tasks', column: 'survey_remark', type: 'TEXT DEFAULT \'\'' },
     { table: 'tasks', column: 'process_remark', type: 'TEXT DEFAULT \'\'' },
+    { table: 'tasks', column: 'insurance_id', type: 'INTEGER' },
     { table: 'villages', column: 'leader', type: 'TEXT DEFAULT \'\'' },
     { table: 'villages', column: 'contact_phone', type: 'TEXT DEFAULT \'\'' }
   ];
@@ -229,6 +237,21 @@ async function initDatabase() {
     ];
     for (const [name, color] of defaultTags) {
       database.prepare('INSERT INTO tags (name, color) VALUES (?, ?)').run(name, color);
+    }
+  }
+
+  // 创建默认出险情况
+  const insuranceCount = database.prepare('SELECT COUNT(*) as count FROM insurance_cases').get();
+  if (insuranceCount.count === 0) {
+    const defaultInsurances = [
+      ['火灾', '因火灾导致的保险理赔'],
+      ['水灾', '因水灾导致的保险理赔'],
+      ['风灾', '因风灾导致的保险理赔'],
+      ['倒塌', '因房屋倒塌导致的保险理赔'],
+      ['其他', '其他出险情况']
+    ];
+    for (const [name, desc] of defaultInsurances) {
+      database.prepare('INSERT INTO insurance_cases (name, description) VALUES (?, ?)').run(name, desc);
     }
   }
 
@@ -309,12 +332,14 @@ function createQueries() {
           SELECT t.*, v.name as village_name,
                  u1.display_name as creator_name,
                  u2.display_name as assignee_name,
-                 tg.name as tag_name, tg.color as tag_color
+                 tg.name as tag_name, tg.color as tag_color,
+                 ic.name as insurance_name
           FROM tasks t
           LEFT JOIN villages v ON t.village_id = v.id
           LEFT JOIN users u1 ON t.created_by = u1.id
           LEFT JOIN users u2 ON t.assigned_to = u2.id
           LEFT JOIN tags tg ON t.tag = tg.name
+          LEFT JOIN insurance_cases ic ON t.insurance_id = ic.id
           WHERE t.is_archived = 0
         `;
         const params = [];
@@ -361,22 +386,24 @@ function createQueries() {
         SELECT t.*, v.name as village_name,
                u1.display_name as creator_name,
                u2.display_name as assignee_name,
-               tg.name as tag_name, tg.color as tag_color
+               tg.name as tag_name, tg.color as tag_color,
+               ic.name as insurance_name
         FROM tasks t
         LEFT JOIN villages v ON t.village_id = v.id
         LEFT JOIN users u1 ON t.created_by = u1.id
         LEFT JOIN users u2 ON t.assigned_to = u2.id
         LEFT JOIN tags tg ON t.tag = tg.name
+        LEFT JOIN insurance_cases ic ON t.insurance_id = ic.id
         WHERE t.id = ?
       `).get(id),
 
       create: (...params) => db.prepare(`
-        INSERT INTO tasks (title, publish_time, tag, village_id, address, contact_phone, purchase_info, remark, survey_status, process_status, created_by, assigned_to)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'not_surveyed', 'pending', ?, ?)
+        INSERT INTO tasks (title, publish_time, tag, village_id, address, contact_phone, purchase_info, remark, insurance_id, survey_status, process_status, created_by, assigned_to)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'not_surveyed', 'pending', ?, ?)
       `).run(...params),
 
       update: (...params) => db.prepare(`
-        UPDATE tasks SET title = ?, publish_time = ?, tag = ?, village_id = ?, address = ?, contact_phone = ?, purchase_info = ?, remark = ?, updated_at = datetime('now')
+        UPDATE tasks SET title = ?, publish_time = ?, tag = ?, village_id = ?, address = ?, contact_phone = ?, purchase_info = ?, remark = ?, insurance_id = ?, updated_at = datetime('now')
         WHERE id = ?
       `).run(...params),
 
@@ -402,12 +429,14 @@ function createQueries() {
           SELECT t.*, v.name as village_name,
                  u1.display_name as creator_name,
                  u2.display_name as assignee_name,
-                 tg.name as tag_name, tg.color as tag_color
+                 tg.name as tag_name, tg.color as tag_color,
+                 ic.name as insurance_name
           FROM tasks t
           LEFT JOIN villages v ON t.village_id = v.id
           LEFT JOIN users u1 ON t.created_by = u1.id
           LEFT JOIN users u2 ON t.assigned_to = u2.id
           LEFT JOIN tags tg ON t.tag = tg.name
+          LEFT JOIN insurance_cases ic ON t.insurance_id = ic.id
           WHERE t.is_archived = 1
         `;
         const params = [];
@@ -471,6 +500,14 @@ function createQueries() {
       create: (...params) => db.prepare('INSERT INTO tags (name, color) VALUES (?, ?)').run(...params),
       update: (...params) => db.prepare('UPDATE tags SET name = ?, color = ? WHERE id = ?').run(...params),
       delete: (id) => db.prepare('DELETE FROM tags WHERE id = ?').run(id)
+    },
+
+    insurance: {
+      getAll: () => db.prepare('SELECT * FROM insurance_cases ORDER BY created_at DESC').all(),
+      getById: (id) => db.prepare('SELECT * FROM insurance_cases WHERE id = ?').get(id),
+      create: (...params) => db.prepare('INSERT INTO insurance_cases (name, description) VALUES (?, ?)').run(...params),
+      update: (...params) => db.prepare('UPDATE insurance_cases SET name = ?, description = ? WHERE id = ?').run(...params),
+      delete: (id) => db.prepare('DELETE FROM insurance_cases WHERE id = ?').run(id)
     }
   };
 }
@@ -484,7 +521,8 @@ function getQueries() {
     taskQueries: q.task,
     logQueries: q.log,
     settingQueries: q.setting,
-    tagQueries: q.tag
+    tagQueries: q.tag,
+    insuranceQueries: q.insurance
   };
 }
 
@@ -511,5 +549,6 @@ module.exports = {
   get taskQueries() { return createQueries().task; },
   get logQueries() { return createQueries().log; },
   get settingQueries() { return createQueries().setting; },
-  get tagQueries() { return createQueries().tag; }
+  get tagQueries() { return createQueries().tag; },
+  get insuranceQueries() { return createQueries().insurance; }
 };

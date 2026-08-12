@@ -19,12 +19,6 @@
       <!-- 基本信息 -->
       <div class="form-section">
         <h3 class="form-section-title">基本信息</h3>
-        <div class="form-row">
-          <div class="form-group">
-            <label class="form-label">任务标题 <span class="text-danger">*</span></label>
-            <input type="text" id="title" class="form-control" placeholder="请输入任务标题" required maxlength="100">
-          </div>
-        </div>
         <div class="form-row form-row-2">
           <div class="form-group">
             <label class="form-label">标签</label>
@@ -51,6 +45,16 @@
             </select>
           </div>
         </div>
+        <div class="form-row form-row-2">
+          <div class="form-group">
+            <label class="form-label">出险情况</label>
+            <select id="insurance" class="form-control">
+              <option value="">请选择出险情况</option>
+            </select>
+          </div>
+          <div class="form-group">
+          </div>
+        </div>
       </div>
 
       <!-- 联系信息 -->
@@ -60,15 +64,9 @@
           <label class="form-label">详细地址</label>
           <input type="text" id="address" class="form-control" placeholder="请输入详细地址" maxlength="200">
         </div>
-        <div class="form-row form-row-2">
-          <div class="form-group">
-            <label class="form-label">联系电话</label>
-            <input type="tel" id="contactPhone" class="form-control" placeholder="请输入联系电话" maxlength="20">
-          </div>
-          <div class="form-group">
-            <label class="form-label">采购信息</label>
-            <input type="text" id="purchaseInfo" class="form-control" placeholder="请输入采购信息" maxlength="200">
-          </div>
+        <div class="form-group">
+          <label class="form-label">联系电话</label>
+          <input type="tel" id="contactPhone" class="form-control" placeholder="请输入联系电话" maxlength="20">
         </div>
       </div>
 
@@ -107,10 +105,11 @@
     // 加载下拉选项
     async function loadOptions() {
       try {
-        const [tags, villages, users] = await Promise.all([
+        const [tags, villages, users, insurances] = await Promise.all([
           App.loadTags(),
           App.loadVillages(),
-          App.loadUsers()
+          App.loadUsers(),
+          App.loadInsurances()
         ]);
 
         // 标签
@@ -139,6 +138,15 @@
           opt.textContent = u.username + (u.display_name ? ` (${u.display_name})` : '');
           assignedSelect.appendChild(opt);
         });
+
+        // 出险情况
+        const insuranceSelect = document.getElementById('insurance');
+        insurances.forEach(i => {
+          const opt = document.createElement('option');
+          opt.value = i.id;
+          opt.textContent = i.name;
+          insuranceSelect.appendChild(opt);
+        });
       } catch (e) {
         console.error('加载选项失败:', e);
         App.showToast('加载选项失败', 'error');
@@ -152,18 +160,16 @@
     document.getElementById('publishForm').addEventListener('submit', async (e) => {
       e.preventDefault();
 
-      const title = document.getElementById('title').value.trim();
       const tag = document.getElementById('tag').value;
       const villageId = document.getElementById('village').value;
       const publishTime = document.getElementById('publishTime').value;
       const assignedTo = document.getElementById('assignedTo').value;
       const address = document.getElementById('address').value.trim();
       const contactPhone = document.getElementById('contactPhone').value.trim();
-      const purchaseInfo = document.getElementById('purchaseInfo').value.trim();
       const remark = document.getElementById('remark').value.trim();
+      const insuranceId = document.getElementById('insurance').value;
 
       // 验证
-      if (!title) { App.showToast('请输入任务标题', 'warning'); return; }
       if (!villageId) { App.showToast('请选择所属村庄', 'warning'); return; }
 
       const submitBtn = document.getElementById('submitBtn');
@@ -176,17 +182,16 @@
 
       try {
         const taskData = {
-          title,
           village_id: parseInt(villageId),
           address,
           contact_phone: contactPhone,
-          purchase_info: purchaseInfo,
           remark
         };
 
         if (tag) taskData.tag = tag;
         if (publishTime) taskData.publish_time = publishTime;
         if (assignedTo) taskData.assigned_to = parseInt(assignedTo);
+        if (insuranceId) taskData.insurance_id = parseInt(insuranceId);
 
         await App.tasks.create(taskData);
         App.showToast('任务发布成功', 'success');

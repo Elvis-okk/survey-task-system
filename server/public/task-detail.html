@@ -175,6 +175,10 @@
               <span class="detail-label">创建时间</span>
               <span class="detail-value">${App.formatDate(task.created_at)}</span>
             </div>
+            <div class="detail-item">
+              <span class="detail-label">出险情况</span>
+              <span class="detail-value">${escapeHtml(task.insurance_name || '未选择')}</span>
+            </div>
           </div>
           <div class="detail-section">
             <h4>联系信息</h4>
