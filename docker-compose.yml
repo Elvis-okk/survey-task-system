@@ -2,7 +2,7 @@ version: '3.8'
 
 services:
   survey-app:
-    image: ghcr.io/elvis-okk/survey-task-system:2.0
+    image: ghcr.io/elvis-okk/survey-task-system:2.1
     build: .
     container_name: survey-task-system
     ports:

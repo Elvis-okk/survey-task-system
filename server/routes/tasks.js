@@ -274,13 +274,19 @@ router.put('/:id/process', requireAuth, requirePermission('can_process'), (req, 
       return res.json({ code: 400, data: null, message: '请先标记为已查勘再更新处理状态' });
     }
 
-    const { process_status, process_remark } = req.body;
+    const { process_status, process_remark, claim_amount } = req.body;
     if (!['pending', 'resurvey', 'missing_docs', 'submitted', 'rejected'].includes(process_status)) {
       return res.json({ code: 400, data: null, message: '无效的处理状态' });
     }
 
+    // 已提交状态必须填写理赔金额
+    if (process_status === 'submitted' && !claim_amount) {
+      return res.json({ code: 400, data: null, message: '请填写理赔金额' });
+    }
+
     const oldStatus = task.process_status;
-    taskQueries.updateProcessStatus(process_status, process_remark || '', process_status, process_status, req.params.id);
+    const claimAmount = process_status === 'submitted' ? (claim_amount || '') : (task.claim_amount || '');
+    taskQueries.updateProcessStatus(process_status, process_remark || '', claimAmount, process_status, process_status, req.params.id);
 
     // 标记已提交或拒赔后自动归档
     if (process_status === 'submitted' || process_status === 'rejected') {

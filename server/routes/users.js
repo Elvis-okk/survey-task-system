@@ -217,6 +217,7 @@ router.put('/:id/password', requireAuth, requireRole('admin'), (req, res) => {
 
     const hashedPassword = bcrypt.hashSync(new_password, 10);
     userQueries.updatePassword(hashedPassword, id);
+    userQueries.incrementTokenVersion(id);
 
     res.json({ code: 0, data: null, message: '密码修改成功' });
   } catch (err) {

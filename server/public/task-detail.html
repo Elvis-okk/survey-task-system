@@ -160,9 +160,9 @@
         <div class="modal-body">
           <div class="form-group">
             <label class="form-label">处理状态</label>
-            <select id="processStatus" class="form-control">
+            <select id="processStatus" class="form-control" onchange="document.getElementById('claimAmountGroup').style.display=this.value==='submitted'?'':'none'">
               <option value="pending">待处理</option>
-              <option value="resurvey">需复查</option>
+              <option value="resurvey">需复勘</option>
               <option value="missing_docs">缺资料</option>
               <option value="submitted">已提交</option>
               <option value="rejected">拒赔</option>
@@ -171,6 +171,10 @@
           <div class="form-group">
             <label class="form-label">处理备注</label>
             <textarea id="processRemark" class="form-control" rows="3" placeholder="请输入处理备注"></textarea>
+          </div>
+          <div class="form-group" id="claimAmountGroup" style="display:none">
+            <label class="form-label">理赔金额 <span style="color:#EF4444">*</span></label>
+            <input type="number" id="claimAmount" class="form-control" placeholder="请输入理赔金额" step="0.01" min="0">
           </div>
         </div>
         <div class="modal-footer">
@@ -416,6 +420,17 @@
             <div class="detail-remark-content">${escapeHtml(task.process_remark)}</div>
           </div>
         </div>` : ''}
+
+        ${task.claim_amount ? `
+        <div class="detail-card">
+          <div class="detail-card-header">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:18px;height:18px"><path d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            理赔金额
+          </div>
+          <div class="detail-card-body">
+            <div class="detail-remark-content" style="font-size:1.2rem;font-weight:600;color:var(--primary)">¥ ${escapeHtml(task.claim_amount)}</div>
+          </div>
+        </div>` : ''}
       `;
     }
 
@@ -490,6 +505,10 @@
     function openProcessModal() {
       document.getElementById('processStatus').value = taskData.process_status || 'pending';
       document.getElementById('processRemark').value = '';
+      document.getElementById('claimAmount').value = taskData.claim_amount || '';
+      // 根据处理状态显示/隐藏理赔金额
+      const claimGroup = document.getElementById('claimAmountGroup');
+      claimGroup.style.display = document.getElementById('processStatus').value === 'submitted' ? '' : 'none';
       document.getElementById('processModal').style.display = '';
     }
     function closeProcessModal() {
@@ -499,12 +518,24 @@
     async function submitProcess() {
       const status = document.getElementById('processStatus').value;
       const remark = document.getElementById('processRemark').value.trim();
+      const claimAmount = document.getElementById('claimAmount').value.trim();
+      
+      // 已提交状态必须填写理赔金额
+      if (status === 'submitted' && !claimAmount) {
+        App.showToast('请输入理赔金额', 'warning');
+        return;
+      }
+      
       const btn = document.getElementById('submitProcessBtn');
       btn.disabled = true;
       btn.textContent = '提交中...';
 
       try {
-        await App.tasks.updateProcess(taskId, { process_status: status, process_remark: remark });
+        const data = { process_status: status, process_remark: remark };
+        if (status === 'submitted') {
+          data.claim_amount = claimAmount;
+        }
+        await App.tasks.updateProcess(taskId, data);
         App.showToast('处理状态更新成功', 'success');
         closeProcessModal();
         loadTask();

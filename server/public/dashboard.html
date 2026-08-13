@@ -109,7 +109,7 @@
     const currentUser = App.initPage();
 
     // 设置欢迎信息
-    document.getElementById('welcomeText').textContent = `欢迎回来，${currentUser.username}`;
+    document.getElementById('welcomeText').textContent = `欢迎回来，${currentUser.display_name || currentUser.username}`;
     document.getElementById('dateText').textContent = new Date().toLocaleDateString('zh-CN', {
       year: 'numeric', month: 'long', day: 'numeric', weekday: 'long'
     });

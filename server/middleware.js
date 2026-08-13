@@ -11,6 +11,22 @@ function requireAuth(req, res, next) {
   const token = authHeader.split(' ')[1];
   try {
     const decoded = jwt.verify(token, JWT_SECRET);
+    
+    // 校验token_version：如果用户修改了密码，旧token的version会不匹配
+    if (decoded.token_version !== undefined) {
+      const { getQueries } = require('./database');
+      try {
+        const { userQueries } = getQueries();
+        const user = userQueries.getById(decoded.id);
+        if (user && (user.token_version || 0) !== decoded.token_version) {
+          return res.status(401).json({ code: 401, data: null, message: '密码已变更，请重新登录' });
+        }
+      } catch (dbErr) {
+        // 数据库查询失败时不阻止请求，仅记录日志
+        console.error('token_version校验数据库查询失败:', dbErr.message);
+      }
+    }
+    
     req.user = decoded;
     next();
   } catch (err) {

@@ -43,7 +43,6 @@ router.get('/tasks', requireAuth, requireRole('admin'), async (req, res) => {
     // 表头
     const headers = [
       { header: 'ID', key: 'id', width: 6 },
-      { header: '标题', key: 'title', width: 20 },
       { header: '发布时间', key: 'publish_time', width: 18 },
       { header: '标签', key: 'tag', width: 12 },
       { header: '村社区', key: 'village_name', width: 12 },
@@ -58,6 +57,7 @@ router.get('/tasks', requireAuth, requireRole('admin'), async (req, res) => {
       { header: '查勘备注', key: 'survey_remark', width: 15 },
       { header: '处理状态', key: 'process_status_text', width: 10 },
       { header: '处理备注', key: 'process_remark', width: 15 },
+      { header: '理赔金额', key: 'claim_amount', width: 12 },
       { header: '发布者', key: 'creator_name', width: 10 },
       { header: '查勘员', key: 'assignee_name', width: 10 },
       { header: '创建时间', key: 'created_at', width: 18 },
@@ -76,13 +76,12 @@ router.get('/tasks', requireAuth, requireRole('admin'), async (req, res) => {
 
     // 状态映射
     const surveyStatusMap = { 'not_surveyed': '未查勘', 'surveyed': '已查勘' };
-    const processStatusMap = { 'pending': '待处理', 'resurvey': '复勘', 'missing_docs': '缺件', 'submitted': '已提交', 'rejected': '拒赔' };
+    const processStatusMap = { 'pending': '待处理', 'resurvey': '需复勘', 'missing_docs': '缺件', 'submitted': '已提交', 'rejected': '拒赔' };
 
     // 填充数据
     allTasks.forEach(task => {
       sheet.addRow({
         id: task.id,
-        title: task.title || '',
         publish_time: task.publish_time || '',
         tag: task.tag || '',
         village_name: task.village_name || villageMap[task.village_id] || '',
@@ -97,6 +96,7 @@ router.get('/tasks', requireAuth, requireRole('admin'), async (req, res) => {
         survey_remark: task.survey_remark || '',
         process_status_text: processStatusMap[task.process_status] || task.process_status || '',
         process_remark: task.process_remark || '',
+        claim_amount: task.claim_amount || '',
         creator_name: task.creator_name || userMap[task.created_by] || '',
         assignee_name: task.assignee_name || userMap[task.assigned_to] || '',
         created_at: task.created_at || '',
@@ -157,7 +157,7 @@ router.post('/tasks/import', requireAuth, requireRole('admin'), upload.single('f
 
     // 状态反向映射
     const surveyStatusReverse = { '未查勘': 'not_surveyed', '已查勘': 'surveyed' };
-    const processStatusReverse = { '待处理': 'pending', '复勘': 'resurvey', '缺件': 'missing_docs', '已提交': 'submitted', '拒赔': 'rejected' };
+    const processStatusReverse = { '待处理': 'pending', '需复勘': 'resurvey', '缺件': 'missing_docs', '已提交': 'submitted', '拒赔': 'rejected' };
 
     let imported = 0;
     let skipped = 0;
@@ -167,19 +167,18 @@ router.post('/tasks/import', requireAuth, requireRole('admin'), upload.single('f
     for (let i = 2; i <= sheet.rowCount; i++) {
       const row = sheet.getRow(i);
       try {
-        const title = row.getCell(2).value || '';
-        const publishTime = row.getCell(3).value || new Date().toISOString().slice(0, 16);
-        const tag = row.getCell(4).value || '';
-        const villageName = row.getCell(5).value || '';
-        const address = row.getCell(6).value || '';
-        const contactPerson = row.getCell(7).value || '';
-        const contactPhone = row.getCell(8).value || '';
-        const purchaseInfo = row.getCell(9).value || '';
-        const hasHarmonyText = row.getCell(10).value || '是';
-        const insuranceName = row.getCell(11).value || '';
-        const remark = row.getCell(12).value || '';
+        const publishTime = row.getCell(2).value || new Date().toISOString().slice(0, 16);
+        const tag = row.getCell(3).value || '';
+        const villageName = row.getCell(4).value || '';
+        const address = row.getCell(5).value || '';
+        const contactPerson = row.getCell(6).value || '';
+        const contactPhone = row.getCell(7).value || '';
+        const purchaseInfo = row.getCell(8).value || '';
+        const hasHarmonyText = row.getCell(9).value || '是';
+        const insuranceName = row.getCell(10).value || '';
+        const remark = row.getCell(11).value || '';
 
-        if (!title) {
+        if (!address) {
           skipped++;
           continue;
         }
@@ -188,11 +187,11 @@ router.post('/tasks/import', requireAuth, requireRole('admin'), upload.single('f
         const hasHarmony = hasHarmonyText === '否' ? 0 : 1;
 
         // 查找查勘员
-        const assigneeName = row.getCell(18).value || '';
+        const assigneeName = row.getCell(17).value || '';
         const assignedTo = userNameMap[assigneeName] || null;
 
         taskQueries.create(
-          title, publishTime, tag, villageId, address,
+          '', publishTime, tag, villageId, address,
           contactPerson, contactPhone, purchaseInfo, remark,
           null, // insurance_id - 需要名称映射，暂设null
           hasHarmony,

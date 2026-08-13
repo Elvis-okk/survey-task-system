@@ -30,7 +30,7 @@ router.post('/login', (req, res) => {
     }
 
     const token = jwt.sign(
-      { id: user.id, username: user.username, role: user.role, display_name: user.display_name, can_publish: user.can_publish, can_edit: user.can_edit, can_process: user.can_process },
+      { id: user.id, username: user.username, role: user.role, display_name: user.display_name, can_publish: user.can_publish, can_edit: user.can_edit, can_process: user.can_process, token_version: user.token_version || 0 },
       JWT_SECRET,
       { expiresIn: '7d' }
     );
@@ -123,8 +123,17 @@ router.put('/password', requireAuth, (req, res) => {
 
     const hashedPassword = bcrypt.hashSync(new_password, 10);
     userQueries.updatePassword(hashedPassword, req.user.id);
+    userQueries.incrementTokenVersion(req.user.id);
 
-    res.json({ code: 0, data: null, message: '密码修改成功' });
+    // 生成新token返回给客户端
+    const updatedUser = userQueries.getById(req.user.id);
+    const newToken = jwt.sign(
+      { id: updatedUser.id, username: updatedUser.username, role: updatedUser.role, display_name: updatedUser.display_name, can_publish: updatedUser.can_publish, can_edit: updatedUser.can_edit, can_process: updatedUser.can_process, token_version: updatedUser.token_version || 0 },
+      JWT_SECRET,
+      { expiresIn: '7d' }
+    );
+
+    res.json({ code: 0, data: { token: newToken }, message: '密码修改成功' });
   } catch (err) {
     console.error('修改密码错误:', err);
     res.json({ code: 500, data: null, message: '服务器错误' });

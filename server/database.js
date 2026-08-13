@@ -215,7 +215,9 @@ async function initDatabase() {
     { table: 'tasks', column: 'has_harmony', type: 'INTEGER DEFAULT 1' },
     { table: 'users', column: 'village_ids', type: "TEXT DEFAULT ''" },
     { table: 'tasks', column: 'surveyed_at', type: 'TEXT' },
-    { table: 'tasks', column: 'submitted_at', type: 'TEXT' }
+    { table: 'tasks', column: 'submitted_at', type: 'TEXT' },
+    { table: 'tasks', column: 'claim_amount', type: "TEXT DEFAULT ''" },
+    { table: 'users', column: 'token_version', type: 'INTEGER DEFAULT 0' }
   ];
 
   // 迁移：将已有village_id数据转为village_ids
@@ -270,6 +272,7 @@ async function initDatabase() {
           survey_remark TEXT DEFAULT '',
           process_remark TEXT DEFAULT '',
           insurance_id INTEGER,
+          claim_amount TEXT DEFAULT '',
           FOREIGN KEY (village_id) REFERENCES villages(id),
           FOREIGN KEY (created_by) REFERENCES users(id),
           FOREIGN KEY (assigned_to) REFERENCES users(id)
@@ -352,7 +355,7 @@ function createQueries() {
         SELECT u.id, u.username, u.display_name, u.role, u.village_ids, u.created_at, u.updated_at, u.is_active,
                u.can_publish, u.can_edit, u.can_process
         FROM users u
-        ORDER BY u.created_at DESC
+        ORDER BY u.id ASC
       `).all(),
 
       getById: (id) => db.prepare(`
@@ -388,6 +391,10 @@ function createQueries() {
         UPDATE users SET password = ?, updated_at = datetime('now') WHERE id = ?
       `).run(...params),
 
+      incrementTokenVersion: (id) => db.prepare(`
+        UPDATE users SET token_version = COALESCE(token_version, 0) + 1, updated_at = datetime('now') WHERE id = ?
+      `).run(id),
+
       toggleActive: (...params) => db.prepare(`
         UPDATE users SET is_active = ?, updated_at = datetime('now') WHERE id = ?
       `).run(...params),
@@ -402,7 +409,7 @@ function createQueries() {
     },
 
     village: {
-      getAll: () => db.prepare('SELECT v.*, u.display_name as leader_name FROM villages v LEFT JOIN users u ON v.leader_id = u.id ORDER BY v.created_at DESC').all(),
+      getAll: () => db.prepare('SELECT v.*, u.display_name as leader_name FROM villages v LEFT JOIN users u ON v.leader_id = u.id ORDER BY v.id ASC').all(),
       getById: (id) => db.prepare('SELECT * FROM villages WHERE id = ?').get(id),
       create: (...params) => db.prepare('INSERT INTO villages (name, leader_id, contact_phone) VALUES (?, ?, ?)').run(...params),
       update: (...params) => db.prepare('UPDATE villages SET name = ?, leader_id = ?, contact_phone = ? WHERE id = ?').run(...params),
@@ -512,7 +519,7 @@ function createQueries() {
       `).run(...params),
 
       updateProcessStatus: (...params) => db.prepare(`
-        UPDATE tasks SET process_status = ?, process_remark = ?, updated_at = datetime('now'),
+        UPDATE tasks SET process_status = ?, process_remark = ?, claim_amount = ?, updated_at = datetime('now'),
           completed_at = CASE WHEN ? IN ('submitted', 'rejected') THEN datetime('now') ELSE completed_at END,
           submitted_at = CASE WHEN ? = 'submitted' THEN datetime('now') ELSE submitted_at END
         WHERE id = ?
