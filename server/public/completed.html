@@ -106,7 +106,9 @@
           return;
         }
 
-        container.innerHTML = tasks.map(task => `
+        container.innerHTML = tasks.map(task => {
+          const canDelete = currentUser.role === 'admin' || task.created_by === currentUser.id;
+          return `
           <div class="task-card" onclick="location.href='task-detail.html?id=${task.id}'">
             <div class="task-card-header">
               <span class="task-card-title">${escapeHtml(task.title)}</span>
@@ -120,8 +122,11 @@
               </div>
                             ${App.taskTagBadge(task)}
             </div>
+            <div class="task-card-footer">
+              ${canDelete ? `<button class="btn btn-danger btn-sm task-delete-btn" onclick="event.stopPropagation();deleteTask(${task.id},'${escapeHtml(task.title)}')" title="删除任务">🗑️ 删除</button>` : ''}
+            </div>
           </div>
-        `).join('');
+        `}).join('');
 
         renderPagination(total);
       } catch (e) {
@@ -170,6 +175,20 @@
       document.getElementById('filterVillage').value = '';
       currentPage = 1;
       loadCompleted();
+    }
+
+    // 删除任务
+    async function deleteTask(taskId, taskTitle) {
+      const confirmed = await App.showConfirm('删除任务', `确定要删除任务"${taskTitle}"吗？此操作不可撤销。`);
+      if (!confirmed) return;
+      try {
+        await App.tasks.delete(taskId);
+        App.showToast('任务删除成功', 'success');
+        loadCompleted();
+        document.getElementById('statTotal').textContent = Math.max(0, parseInt(document.getElementById('statTotal').textContent) - 1);
+      } catch (e) {
+        App.showToast(e.message || '删除失败', 'error');
+      }
     }
 
     // 事件

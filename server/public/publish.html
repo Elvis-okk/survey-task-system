@@ -55,8 +55,8 @@
           <div class="form-group">
             <label class="form-label">有否买和谐</label>
             <select id="hasHarmony" class="form-control">
+              <option value="1" selected>是</option>
               <option value="0">否</option>
-              <option value="1">是</option>
             </select>
           </div>
         </div>
@@ -128,9 +128,6 @@
         cachedVillages = villages;
         cachedSurveyors = surveyors;
 
-        console.log('[村庄联动] 加载完成, 村庄数=', villages.length, '查勘员数=', surveyors.length);
-        console.log('[村庄联动] 查勘员数据=', JSON.stringify(surveyors.map(s => ({id: s.id, name: s.display_name, village_id: s.village_id, village_name: s.village_name}))));
-
         // 标签
         const tagSelect = document.getElementById('tag');
         tags.forEach(t => {
@@ -143,14 +140,13 @@
         // 村庄（初始加载全部）
         renderVillageOptions(villages);
 
-        // 查勘员
+        // 查勘员 - 只显示名称
         const assignedSelect = document.getElementById('assignedTo');
         assignedSelect.innerHTML = '<option value="">请选择查勘员</option>';
         surveyors.forEach(u => {
           const opt = document.createElement('option');
           opt.value = u.id;
           opt.textContent = u.display_name || u.username;
-          if (u.village_name) opt.textContent += ` (${u.village_name})`;
           assignedSelect.appendChild(opt);
         });
 
@@ -184,40 +180,33 @@
       }
     }
 
-    // 查勘员选择变化时，过滤村庄只显示该查勘员所属村，并自动选中
+    // 查勘员选择变化时，过滤村庄只显示该查勘员负责的村
     document.getElementById('assignedTo').addEventListener('change', function() {
       const selectedValue = this.value;
-      const villageSelect = document.getElementById('village');
-      
-      console.log('[村庄联动] 选择查勘员, value=', selectedValue);
-      
+
       if (!selectedValue) {
         // 未选择查勘员时，恢复显示全部村庄
         renderVillageOptions(cachedVillages);
-        console.log('[村庄联动] 未选择查勘员，恢复全部村庄，数量=', cachedVillages.length);
         return;
       }
-      
+
       const userId = Number(selectedValue);
       const surveyor = cachedSurveyors.find(u => Number(u.id) === userId);
-      console.log('[村庄联动] 找到查勘员=', surveyor ? JSON.stringify({id: surveyor.id, name: surveyor.display_name, village_id: surveyor.village_id, village_name: surveyor.village_name}) : 'null');
-      
-      if (surveyor && surveyor.village_id != null && surveyor.village_id !== '') {
-        // 只显示该查勘员所属村庄
-        const targetVillageId = Number(surveyor.village_id);
-        const filteredVillages = cachedVillages.filter(v => Number(v.id) === targetVillageId);
-        console.log('[村庄联动] 过滤村庄, targetVillageId=', targetVillageId, '匹配数量=', filteredVillages.length, '全部村庄=', cachedVillages.map(v => ({id: v.id, name: v.name})));
-        
+
+      if (surveyor && surveyor.village_ids && surveyor.village_ids.trim() !== '') {
+        // 解析village_ids（逗号分隔），过滤出该查勘员负责的村庄
+        const surveyorVillageIds = surveyor.village_ids.split(',').map(id => parseInt(id.trim())).filter(id => !isNaN(id));
+        const filteredVillages = cachedVillages.filter(v => surveyorVillageIds.includes(Number(v.id)));
+
         if (filteredVillages.length > 0) {
-          renderVillageOptions(filteredVillages, surveyor.village_id);
+          // 只显示该查勘员负责的村庄，自动选中第一个
+          renderVillageOptions(filteredVillages, filteredVillages[0].id);
         } else {
-          // 如果没有匹配的村庄，显示全部并尝试选中
-          console.log('[村庄联动] 未找到匹配村庄，显示全部');
-          renderVillageOptions(cachedVillages, surveyor.village_id);
+          // 没有匹配的村庄，显示全部
+          renderVillageOptions(cachedVillages);
         }
       } else {
         // 查勘员无村庄关联，恢复全部
-        console.log('[村庄联动] 查勘员无村庄关联，恢复全部村庄');
         renderVillageOptions(cachedVillages);
       }
     });

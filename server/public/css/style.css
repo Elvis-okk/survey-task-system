@@ -51,7 +51,7 @@
 }
 
 html {
-  font-size: 16px;
+  font-size: 17px;
   -webkit-text-size-adjust: 100%;
 }
 
@@ -59,7 +59,7 @@ body {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
   background: var(--bg);
   color: var(--text-primary);
-  line-height: 1.6;
+  line-height: 1.5;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   min-height: 100vh;
@@ -120,7 +120,7 @@ img { max-width: 100%; }
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 0.875rem;
+  font-size: 0.95rem;
   color: var(--text-secondary);
 }
 
@@ -142,7 +142,7 @@ img { max-width: 100%; }
   align-items: center;
   padding: 2px 8px;
   border-radius: 20px;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 600;
 }
 
@@ -240,7 +240,7 @@ img { max-width: 100%; }
   padding: 8px 16px;
   border: none;
   border-radius: var(--radius);
-  font-size: 0.875rem;
+  font-size: 0.95rem;
   font-weight: 500;
   cursor: pointer;
   transition: all var(--transition);
@@ -304,7 +304,7 @@ img { max-width: 100%; }
   color: var(--text-primary);
 }
 
-.btn-sm { padding: 5px 10px; font-size: 0.8rem; }
+.btn-sm { padding: 5px 10px; font-size: 0.875rem; }
 .btn-lg { padding: 12px 24px; font-size: 1rem; }
 .btn-block { width: 100%; }
 
@@ -335,7 +335,7 @@ img { max-width: 100%; }
 }
 
 .card-header {
-  padding: 16px 20px;
+  padding: 12px 14px;
   border-bottom: 1px solid var(--border-light);
   display: flex;
   align-items: center;
@@ -343,11 +343,11 @@ img { max-width: 100%; }
 }
 
 .card-body {
-  padding: 20px;
+  padding: 14px;
 }
 
 .card-footer {
-  padding: 12px 20px;
+  padding: 8px 14px;
   border-top: 1px solid var(--border-light);
   background: var(--bg);
 }
@@ -356,23 +356,23 @@ img { max-width: 100%; }
    表单
    ============================ */
 .form-group {
-  margin-bottom: 16px;
+  margin-bottom: 10px;
 }
 
 .form-label {
   display: block;
-  font-size: 0.875rem;
+  font-size: 0.95rem;
   font-weight: 500;
   color: var(--text-primary);
-  margin-bottom: 6px;
+  margin-bottom: 4px;
 }
 
 .form-control {
   width: 100%;
-  padding: 10px 14px;
+  padding: 8px 12px;
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  font-size: 0.875rem;
+  font-size: 0.95rem;
   color: var(--text-primary);
   background: var(--bg-white);
   transition: border-color var(--transition), box-shadow var(--transition);
@@ -422,7 +422,7 @@ select.form-control {
   align-items: center;
   padding: 3px 10px;
   border-radius: 20px;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 500;
   white-space: nowrap;
   gap: 4px;
@@ -444,6 +444,7 @@ select.form-control {
 .process-resurvey { background: var(--danger-bg); color: #991B1B; }
 .process-missing_docs { background: #FEF3C7; color: #92400E; }
 .process-submitted { background: var(--success-bg); color: #065F46; }
+.process-rejected { background: #FEE2E2; color: #991B1B; }
 
 /* ============================
    模态框
@@ -472,14 +473,14 @@ select.form-control {
 }
 
 .modal-header {
-  padding: 20px 24px 0;
+  padding: 14px 18px 0;
   display: flex;
   align-items: center;
   justify-content: space-between;
 }
 
 .modal-header h3 {
-  font-size: 1.1rem;
+  font-size: 1.15rem;
   font-weight: 600;
 }
 
@@ -502,11 +503,57 @@ select.form-control {
 }
 
 .modal-body {
-  padding: 20px 24px;
+  padding: 14px 18px;
 }
 
 .modal-footer {
-  padding: 0 24px 20px;
+  padding: 0 18px 14px;
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+/* ============================
+   确认对话框
+   ============================ */
+.confirm-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.confirm-box {
+  background: var(--bg-white);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  max-width: 400px;
+  width: 100%;
+  overflow: hidden;
+}
+
+.confirm-box h3 {
+  padding: 14px 18px 0;
+  font-size: 1.1rem;
+  color: var(--text-primary);
+}
+
+.confirm-box p {
+  padding: 10px 18px;
+  font-size: 0.95rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+.confirm-actions {
+  padding: 0 18px 14px;
   display: flex;
   gap: 10px;
   justify-content: flex-end;
@@ -527,13 +574,13 @@ select.form-control {
 }
 
 .toast {
-  padding: 12px 16px;
+  padding: 10px 14px;
   border-radius: var(--radius);
   box-shadow: var(--shadow-md);
   display: flex;
   align-items: center;
   gap: 10px;
-  font-size: 0.875rem;
+  font-size: 0.95rem;
   animation: slideInRight 0.3s ease;
   background: var(--bg-white);
   border-left: 4px solid var(--info);
@@ -564,14 +611,14 @@ select.form-control {
 .stats-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 16px;
-  margin-bottom: 24px;
+  gap: 10px;
+  margin-bottom: 16px;
 }
 
 .stat-card {
   background: var(--bg-white);
   border-radius: var(--radius-lg);
-  padding: 20px;
+  padding: 14px;
   border: 1px solid var(--border);
   box-shadow: var(--shadow-sm);
   display: flex;
@@ -603,7 +650,7 @@ select.form-control {
 .stat-icon.red { background: var(--danger-bg); color: var(--danger); }
 
 .stat-info h4 {
-  font-size: 0.8rem;
+  font-size: 0.875rem;
   color: var(--text-secondary);
   font-weight: 400;
   margin-bottom: 2px;
@@ -639,14 +686,14 @@ select.form-control {
 .task-list {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 8px;
 }
 
 .task-card {
   background: var(--bg-white);
   border-radius: var(--radius-lg);
   border: 1px solid var(--border);
-  padding: 16px 20px;
+  padding: 10px 14px;
   cursor: pointer;
   transition: all var(--transition);
   box-shadow: var(--shadow-sm);
@@ -662,7 +709,7 @@ select.form-control {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 8px;
+  margin-bottom: 6px;
   gap: 8px;
   flex-wrap: wrap;
 }
@@ -682,7 +729,7 @@ select.form-control {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 10px;
+  margin-bottom: 6px;
   gap: 8px;
   flex-wrap: wrap;
 }
@@ -699,22 +746,35 @@ select.form-control {
 }
 
 .task-card-body {
-  margin-bottom: 10px;
+  margin-bottom: 6px;
 }
 
 .task-card-info {
   display: flex;
   flex-wrap: wrap;
-  gap: 12px;
-  font-size: 0.9rem;
+  gap: 8px;
+  font-size: 1rem;
   color: var(--text-secondary);
-  margin-bottom: 6px;
+  margin-bottom: 4px;
 }
 
 .task-card-footer {
   display: flex;
   align-items: center;
   gap: 8px;
+  justify-content: space-between;
+}
+
+.task-delete-btn {
+  flex-shrink: 0;
+  font-size: 0.75rem !important;
+  padding: 3px 8px !important;
+  opacity: 0.7;
+  transition: opacity var(--transition);
+}
+
+.task-delete-btn:hover {
+  opacity: 1;
 }
 
 /* ============================
@@ -723,7 +783,7 @@ select.form-control {
 .page-container {
   max-width: 1200px;
   margin: 0 auto;
-  padding: 76px 16px 24px;
+  padding: 76px 16px 16px;
   min-height: 100vh;
 }
 
@@ -737,13 +797,13 @@ select.form-control {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 20px;
+  margin-bottom: 12px;
   flex-wrap: wrap;
   gap: 12px;
 }
 
 .page-header h2 {
-  font-size: 1.3rem;
+  font-size: 1.4rem;
   font-weight: 700;
   color: var(--text-primary);
 }
@@ -755,12 +815,12 @@ select.form-control {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 16px;
-  margin-top: 8px;
+  margin-bottom: 10px;
+  margin-top: 4px;
 }
 
 .section-header h3 {
-  font-size: 1.05rem;
+  font-size: 1.1rem;
   font-weight: 600;
   color: var(--text-primary);
 }
@@ -777,8 +837,8 @@ select.form-control {
 .quick-actions {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
-  gap: 12px;
-  margin-bottom: 24px;
+  gap: 8px;
+  margin-bottom: 16px;
 }
 
 .quick-action-btn {
@@ -786,7 +846,7 @@ select.form-control {
   flex-direction: column;
   align-items: center;
   gap: 8px;
-  padding: 16px 12px;
+  padding: 14px 10px;
   background: var(--bg-white);
   border-radius: var(--radius-lg);
   border: 1px solid var(--border);
@@ -794,7 +854,7 @@ select.form-control {
   transition: all var(--transition);
   text-decoration: none;
   color: var(--text-primary);
-  font-size: 0.8rem;
+  font-size: 0.875rem;
   font-weight: 500;
 }
 
@@ -822,8 +882,8 @@ select.form-control {
    筛选栏
    ============================ */
 .filter-card {
-  margin-bottom: 16px;
-  padding: 12px 16px;
+  margin-bottom: 10px;
+  padding: 8px 12px;
 }
 
 .filter-bar {
@@ -839,8 +899,8 @@ select.form-control {
 }
 
 .filter-item .form-control {
-  padding: 8px 12px;
-  font-size: 0.8rem;
+  padding: 7px 10px;
+  font-size: 0.875rem;
 }
 
 .filter-item .btn {
@@ -857,8 +917,8 @@ select.form-control {
    表单分区
    ============================ */
 .form-section {
-  margin-bottom: 24px;
-  padding-bottom: 20px;
+  margin-bottom: 16px;
+  padding-bottom: 14px;
   border-bottom: 1px solid var(--border-light);
 }
 
@@ -868,10 +928,10 @@ select.form-control {
 }
 
 .form-section-title {
-  font-size: 0.95rem;
+  font-size: 1rem;
   font-weight: 600;
   color: var(--text-primary);
-  margin-bottom: 16px;
+  margin-bottom: 10px;
 }
 
 .form-row {
@@ -881,7 +941,7 @@ select.form-control {
 .form-row-2 {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 16px;
+  gap: 10px;
 }
 
 @media (max-width: 768px) {
@@ -892,9 +952,9 @@ select.form-control {
 
 .form-actions {
   display: flex;
-  gap: 12px;
+  gap: 8px;
   justify-content: flex-end;
-  padding-top: 16px;
+  padding-top: 10px;
   border-top: 1px solid var(--border-light);
 }
 
@@ -908,13 +968,13 @@ select.form-control {
    详情页
    ============================ */
 .detail-header {
-  margin-bottom: 20px;
+  margin-bottom: 12px;
 }
 
 .detail-header h2 {
-  font-size: 1.3rem;
+  font-size: 1.4rem;
   font-weight: 700;
-  margin-bottom: 10px;
+  margin-bottom: 6px;
 }
 
 .detail-badges {
@@ -926,7 +986,7 @@ select.form-control {
 .detail-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: 20px;
+  gap: 12px;
 }
 
 .detail-section {
@@ -934,11 +994,11 @@ select.form-control {
 }
 
 .detail-section h4 {
-  font-size: 0.95rem;
+  font-size: 1rem;
   font-weight: 600;
   color: var(--primary);
-  margin-bottom: 10px;
-  padding-bottom: 6px;
+  margin-bottom: 6px;
+  padding-bottom: 4px;
   border-bottom: 1px solid var(--border-light);
 }
 
@@ -946,22 +1006,22 @@ select.form-control {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  padding: 6px 0;
-  font-size: 0.95rem;
+  padding: 4px 0;
+  font-size: 1rem;
 }
 
 .detail-label {
   color: var(--text-secondary);
   flex-shrink: 0;
   margin-right: 12px;
-  font-size: 0.95rem;
+  font-size: 1rem;
 }
 
 .detail-value {
   color: var(--text-primary);
   text-align: right;
   word-break: break-word;
-  font-size: 0.95rem;
+  font-size: 1rem;
 }
 
 .detail-value a {
@@ -969,10 +1029,10 @@ select.form-control {
 }
 
 .detail-remark {
-  font-size: 0.95rem;
+  font-size: 1rem;
   color: var(--text-secondary);
-  line-height: 1.6;
-  padding: 8px 12px;
+  line-height: 1.5;
+  padding: 6px 10px;
   background: var(--bg);
   border-radius: var(--radius);
 }
@@ -992,16 +1052,16 @@ select.form-control {
 .tabs {
   display: flex;
   gap: 4px;
-  margin-bottom: 20px;
+  margin-bottom: 12px;
   border-bottom: 2px solid var(--border-light);
   overflow-x: auto;
 }
 
 .tab {
-  padding: 10px 20px;
+  padding: 8px 16px;
   border: none;
   background: none;
-  font-size: 0.9rem;
+  font-size: 0.95rem;
   font-weight: 500;
   color: var(--text-secondary);
   cursor: pointer;
@@ -1039,15 +1099,15 @@ select.form-control {
 .data-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 0.875rem;
+  font-size: 0.95rem;
 }
 
 .data-table th {
-  padding: 10px 14px;
+  padding: 8px 12px;
   text-align: left;
   font-weight: 600;
   color: var(--text-secondary);
-  font-size: 0.8rem;
+  font-size: 0.875rem;
   text-transform: uppercase;
   letter-spacing: 0.5px;
   border-bottom: 2px solid var(--border-light);
@@ -1055,7 +1115,7 @@ select.form-control {
 }
 
 .data-table td {
-  padding: 10px 14px;
+  padding: 8px 12px;
   border-bottom: 1px solid var(--border-light);
   color: var(--text-primary);
   vertical-align: middle;
@@ -1077,7 +1137,7 @@ select.form-control {
   justify-content: center;
   align-items: center;
   gap: 4px;
-  margin-top: 20px;
+  margin-top: 12px;
   flex-wrap: wrap;
 }
 
@@ -1087,7 +1147,7 @@ select.form-control {
   border-radius: var(--radius-sm);
   background: var(--bg-white);
   color: var(--text-primary);
-  font-size: 0.8rem;
+  font-size: 0.875rem;
   cursor: pointer;
   transition: all var(--transition);
 }
@@ -1130,7 +1190,7 @@ select.form-control {
   background: var(--bg-white);
   border-radius: var(--radius-xl);
   box-shadow: var(--shadow-lg);
-  padding: 40px 32px;
+  padding: 32px 24px;
   width: 100%;
   max-width: 400px;
   animation: slideUp 0.4s ease;
@@ -1138,7 +1198,7 @@ select.form-control {
 
 .login-logo {
   text-align: center;
-  margin-bottom: 32px;
+  margin-bottom: 24px;
 }
 
 .logo-circle {
@@ -1159,29 +1219,29 @@ select.form-control {
 }
 
 .login-logo h1 {
-  font-size: 1.3rem;
+  font-size: 1.4rem;
   font-weight: 700;
   color: var(--text-primary);
   margin-bottom: 4px;
 }
 
 .login-logo p {
-  font-size: 0.875rem;
+  font-size: 0.95rem;
   color: var(--text-secondary);
 }
 
 .login-form .form-group {
-  margin-bottom: 18px;
+  margin-bottom: 12px;
 }
 
 .login-error {
   display: none;
-  padding: 10px 14px;
+  padding: 8px 12px;
   background: var(--danger-bg);
   color: #991B1B;
   border-radius: var(--radius);
-  font-size: 0.8rem;
-  margin-bottom: 16px;
+  font-size: 0.875rem;
+  margin-bottom: 10px;
 }
 
 .login-error.show {
@@ -1209,8 +1269,8 @@ select.form-control {
 
 .login-footer {
   text-align: center;
-  margin-top: 24px;
-  font-size: 0.75rem;
+  margin-top: 16px;
+  font-size: 0.8rem;
   color: var(--text-muted);
 }
 
@@ -1229,7 +1289,7 @@ select.form-control {
 }
 
 .empty-state p {
-  font-size: 0.9rem;
+  font-size: 0.95rem;
 }
 
 /* ============================
@@ -1270,7 +1330,7 @@ select.form-control {
   background: var(--bg-white);
   border-radius: var(--radius-xl);
   box-shadow: var(--shadow-lg);
-  padding: 24px;
+  padding: 18px;
   width: 100%;
   max-width: 360px;
   text-align: center;
@@ -1278,15 +1338,15 @@ select.form-control {
 }
 
 .confirm-dialog h3 {
-  font-size: 1.05rem;
+  font-size: 1.1rem;
   font-weight: 600;
   margin-bottom: 8px;
 }
 
 .confirm-dialog p {
-  font-size: 0.875rem;
+  font-size: 0.95rem;
   color: var(--text-secondary);
-  margin-bottom: 20px;
+  margin-bottom: 14px;
 }
 
 .confirm-actions {
@@ -1393,12 +1453,12 @@ select.form-control {
   }
 
   .data-table {
-    font-size: 0.8rem;
+    font-size: 0.875rem;
   }
 
   .data-table th,
   .data-table td {
-    padding: 8px 10px;
+    padding: 6px 8px;
   }
 
   .login-card {
@@ -1427,8 +1487,8 @@ select.form-control {
 .task-card .task-info {
   display: flex;
   flex-wrap: wrap;
-  gap: 12px;
-  font-size: 0.8rem;
+  gap: 8px;
+  font-size: 0.9rem;
   color: var(--text-secondary);
   margin-top: 6px;
 }
@@ -1587,7 +1647,7 @@ select.form-control {
 
 .data-table th,
 .data-table td {
-  padding: 10px 14px;
+  padding: 8px 12px;
   text-align: left;
   border-bottom: 1px solid var(--border-light);
 }
@@ -1688,7 +1748,7 @@ select.form-control {
   background: var(--bg-white);
   border-radius: var(--radius-xl);
   box-shadow: var(--shadow-lg);
-  padding: 40px 32px;
+  padding: 32px 24px;
   width: 100%;
   max-width: 420px;
   animation: slideUp 0.4s ease;
@@ -1696,7 +1756,7 @@ select.form-control {
 
 .login-logo {
   text-align: center;
-  margin-bottom: 32px;
+  margin-bottom: 24px;
 }
 
 .login-logo .logo-circle {
@@ -1718,19 +1778,19 @@ select.form-control {
 }
 
 .login-logo h1 {
-  font-size: 1.3rem;
+  font-size: 1.4rem;
   font-weight: 700;
   color: var(--text-primary);
 }
 
 .login-logo p {
-  font-size: 0.875rem;
+  font-size: 0.95rem;
   color: var(--text-secondary);
   margin-top: 4px;
 }
 
 .login-form .form-group {
-  margin-bottom: 18px;
+  margin-bottom: 12px;
 }
 
 .login-form .form-control {
@@ -1763,8 +1823,8 @@ select.form-control {
 
 .login-footer {
   text-align: center;
-  margin-top: 24px;
-  font-size: 0.75rem;
+  margin-top: 16px;
+  font-size: 0.8rem;
   color: var(--text-muted);
 }
 
@@ -1948,7 +2008,7 @@ select.form-control {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 20px;
+  margin-bottom: 12px;
   flex-wrap: wrap;
   gap: 10px;
 }

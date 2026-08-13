@@ -12,3 +12,4 @@ __pycache__/
 *.b64
 keystore_b64.txt
 keystore.properties
+*.db

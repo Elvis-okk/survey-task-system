@@ -109,6 +109,7 @@
             <option value="pending">待处理</option>
             <option value="resurvey">需复勘</option>
             <option value="missing_docs">缺资料</option>
+            <option value="rejected">拒赔</option>
           </select>
         </div>
         <div class="filter-item">
@@ -302,6 +303,7 @@
 
         container.innerHTML = tasks.map(task => {
           const showProcess = task.survey_status === 'surveyed' && task.process_status;
+          const canDelete = true;
           return `
           <div class="task-card" onclick="location.href='task-detail.html?id=${task.id}'">
             <div class="task-card-header">
@@ -319,6 +321,7 @@
             </div>
             <div class="task-card-footer">
               ${showProcess ? App.processStatusBadge(task.process_status) : ''}
+              ${canDelete ? `<button class="btn btn-danger btn-sm task-delete-btn" onclick="event.stopPropagation();deleteTask(${task.id},'${escapeHtml(task.title)}')" title="删除任务">🗑️ 删除</button>` : ''}
             </div>
           </div>
         `}).join('');
@@ -372,6 +375,20 @@
       document.getElementById('filterProcessStatus').value = '';
       currentPage = 1;
       loadTasks();
+    }
+
+    // 删除任务
+    async function deleteTask(taskId, taskTitle) {
+      const confirmed = await App.showConfirm('删除任务', `确定要删除任务"${taskTitle}"吗？此操作不可撤销。`);
+      if (!confirmed) return;
+      try {
+        await App.tasks.delete(taskId);
+        App.showToast('任务删除成功', 'success');
+        loadTasks();
+        loadTabCounts();
+      } catch (e) {
+        App.showToast(e.message || '删除失败', 'error');
+      }
     }
 
     // 事件监听

@@ -4,21 +4,33 @@ const bcrypt = require('bcryptjs');
 const { getQueries } = require('../database');
 const { requireAuth, requireRole, requirePermission } = require('../middleware');
 
+// 辅助函数：将village_ids(逗号分隔)解析为village_names(逗号分隔)
+function resolveVillageNames(villageIds, villages) {
+  if (!villageIds || villageIds.trim() === '') return '';
+  const ids = villageIds.split(',').map(id => parseInt(id.trim())).filter(id => !isNaN(id));
+  const names = ids.map(id => {
+    const v = villages.find(v => v.id === id);
+    return v ? v.name : null;
+  }).filter(name => name !== null);
+  return names.join(',');
+}
+
 // GET /api/users/surveyors - 获取查勘员列表（仅需登录，用于发布任务时选择查勘员）
 router.get('/surveyors', requireAuth, (req, res) => {
   try {
-    const { userQueries } = getQueries();
+    const { userQueries, villageQueries } = getQueries();
     const allUsers = userQueries.getAll();
-    // 筛选有处理权限的活跃用户（查勘员或管理员）
+    const villages = villageQueries.getAll();
+    // 筛选角色为查勘员的活跃用户
     const surveyors = allUsers
-      .filter(u => (u.can_process || u.role === 'surveyor') && u.is_active !== 0)
+      .filter(u => u.role === 'surveyor' && u.is_active !== 0)
       .map(u => ({
         id: u.id,
         username: u.username,
         display_name: u.display_name,
         role: u.role,
-        village_id: u.village_id,
-        village_name: u.village_name
+        village_ids: u.village_ids || '',
+        village_names: resolveVillageNames(u.village_ids, villages)
       }));
     res.json({ code: 0, data: surveyors, message: '' });
   } catch (err) {
@@ -30,16 +42,17 @@ router.get('/surveyors', requireAuth, (req, res) => {
 // GET /api/users - 获取用户列表（管理员）
 router.get('/', requireAuth, requireRole('admin'), (req, res) => {
   try {
-    const { userQueries } = getQueries();
+    const { userQueries, villageQueries } = getQueries();
     const users = userQueries.getAll();
+    const villages = villageQueries.getAll();
     // 不返回密码
     const safeUsers = users.map(u => ({
       id: u.id,
       username: u.username,
       display_name: u.display_name,
       role: u.role,
-      village_id: u.village_id,
-      village_name: u.village_name,
+      village_ids: u.village_ids || '',
+      village_names: resolveVillageNames(u.village_ids, villages),
       can_publish: u.can_publish,
       can_edit: u.can_edit,
       can_process: u.can_process,
@@ -57,7 +70,7 @@ router.get('/', requireAuth, requireRole('admin'), (req, res) => {
 // POST /api/users - 创建用户（管理员）
 router.post('/', requireAuth, requireRole('admin'), (req, res) => {
   try {
-    const { username, password, display_name, role, village_id, can_publish, can_edit, can_process } = req.body;
+    const { username, password, display_name, role, village_ids, can_publish, can_edit, can_process } = req.body;
 
     if (!username || !password || !display_name) {
       return res.json({ code: 400, data: null, message: '用户名、密码和显示名称不能为空' });
@@ -79,8 +92,10 @@ router.post('/', requireAuth, requireRole('admin'), (req, res) => {
     const edit = can_edit !== undefined ? (can_edit ? 1 : 0) : (role === 'admin' || role === 'publisher' ? 1 : 0);
     const proc = can_process !== undefined ? (can_process ? 1 : 0) : (role === 'admin' || role === 'surveyor' ? 1 : 0);
     const userRole = role || 'publisher';
+    // village_ids: 逗号分隔的村庄ID字符串
+    const villageIdsStr = village_ids || '';
 
-    const result = userQueries.create(username, hashedPassword, display_name, userRole, village_id || null, pub, edit, proc);
+    const result = userQueries.create(username, hashedPassword, display_name, userRole, villageIdsStr, pub, edit, proc);
 
     res.json({ code: 0, data: { id: result.lastInsertRowid }, message: '用户创建成功' });
   } catch (err) {
@@ -93,7 +108,7 @@ router.post('/', requireAuth, requireRole('admin'), (req, res) => {
 router.put('/:id', requireAuth, requireRole('admin'), (req, res) => {
   try {
     const { id } = req.params;
-    const { username, display_name, role, village_id, can_publish, can_edit, can_process } = req.body;
+    const { username, display_name, role, village_ids, can_publish, can_edit, can_process } = req.body;
 
     const { userQueries } = getQueries();
     const user = userQueries.getById(id);
@@ -112,12 +127,13 @@ router.put('/:id', requireAuth, requireRole('admin'), (req, res) => {
     const newUsername = username || user.username;
     const newDisplayName = display_name || user.display_name;
     const newRole = role || user.role;
-    const newVillageId = village_id !== undefined ? village_id : user.village_id;
+    // village_ids: 逗号分隔的村庄ID字符串
+    const newVillageIds = village_ids !== undefined ? village_ids : (user.village_ids || '');
     const newPub = can_publish !== undefined ? (can_publish ? 1 : 0) : user.can_publish;
     const newEdit = can_edit !== undefined ? (can_edit ? 1 : 0) : user.can_edit;
     const newProc = can_process !== undefined ? (can_process ? 1 : 0) : user.can_process;
 
-    userQueries.updateWithUsername(newUsername, newDisplayName, newRole, newVillageId, newPub, newEdit, newProc, id);
+    userQueries.updateWithUsername(newUsername, newDisplayName, newRole, newVillageIds, newPub, newEdit, newProc, id);
 
     res.json({ code: 0, data: null, message: '用户更新成功' });
   } catch (err) {
@@ -179,6 +195,32 @@ router.put('/:id/role', requireAuth, requireRole('admin'), (req, res) => {
     res.json({ code: 0, data: null, message: '角色修改成功' });
   } catch (err) {
     console.error('修改角色错误:', err);
+    res.json({ code: 500, data: null, message: '服务器错误' });
+  }
+});
+
+// PUT /api/users/:id/password - 管理员修改用户密码
+router.put('/:id/password', requireAuth, requireRole('admin'), (req, res) => {
+  try {
+    const { id } = req.params;
+    const { new_password } = req.body;
+
+    if (!new_password || new_password.length < 6) {
+      return res.json({ code: 400, data: null, message: '密码长度不能少于6位' });
+    }
+
+    const { userQueries } = getQueries();
+    const user = userQueries.getById(id);
+    if (!user) {
+      return res.json({ code: 404, data: null, message: '用户不存在' });
+    }
+
+    const hashedPassword = bcrypt.hashSync(new_password, 10);
+    userQueries.updatePassword(hashedPassword, id);
+
+    res.json({ code: 0, data: null, message: '密码修改成功' });
+  } catch (err) {
+    console.error('修改用户密码错误:', err);
     res.json({ code: 500, data: null, message: '服务器错误' });
   }
 });

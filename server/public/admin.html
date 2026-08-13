@@ -20,6 +20,7 @@
       <button class="tab" onclick="switchTab('tags')">标签管理</button>
       <button class="tab" onclick="switchTab('villages')">村社区管理</button>
       <button class="tab" onclick="switchTab('insurances')">出险情况</button>
+      <button class="tab" onclick="switchTab('data')">导入导出</button>
     </div>
 
     <!-- 用户管理 -->
@@ -37,6 +38,7 @@
                 <th>用户名</th>
                 <th>显示名</th>
                 <th>角色</th>
+                <th>负责村社区</th>
                 <th>权限</th>
                 <th>状态</th>
                 <th>操作</th>
@@ -125,6 +127,48 @@
         </div>
       </div>
     </div>
+
+    <!-- 导入导出 -->
+    <div id="tab-data" class="tab-content">
+      <div class="section-header">
+        <h3>数据导入导出</h3>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
+        <!-- 任务数据 -->
+        <div class="card" style="padding:20px">
+          <h4 style="margin:0 0 16px 0">任务数据</h4>
+          <div style="display:flex;flex-direction:column;gap:12px">
+            <button class="btn btn-primary" onclick="exportTasks()" id="btnExportTasks">导出所有任务 (xlsx)</button>
+            <div>
+              <label class="btn btn-secondary" style="display:inline-block;cursor:pointer">
+                导入任务 (xlsx)
+                <input type="file" accept=".xlsx,.xls" style="display:none" onchange="importTasks(event)">
+              </label>
+              <span id="importTasksStatus" style="margin-left:8px;font-size:0.85rem;color:var(--text-muted)"></span>
+            </div>
+          </div>
+        </div>
+        <!-- 系统配置 -->
+        <div class="card" style="padding:20px">
+          <h4 style="margin:0 0 16px 0">系统配置及用户设置</h4>
+          <div style="display:flex;flex-direction:column;gap:12px">
+            <button class="btn btn-primary" onclick="exportConfig()" id="btnExportConfig">导出系统配置 (xlsx)</button>
+            <div>
+              <label class="btn btn-secondary" style="display:inline-block;cursor:pointer">
+                导入系统配置 (xlsx)
+                <input type="file" accept=".xlsx,.xls" style="display:none" onchange="importConfig(event)">
+              </label>
+              <span id="importConfigStatus" style="margin-left:8px;font-size:0.85rem;color:var(--text-muted)"></span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="card" style="margin-top:20px;padding:16px">
+        <p style="margin:0;font-size:0.85rem;color:var(--text-muted)">
+          提示：导出文件为xlsx格式，可直接用Excel打开编辑后导入。导入任务时，村社区名称需与系统中的名称一致。导入系统配置时，已有用户将更新信息，新用户默认密码为123456。
+        </p>
+      </div>
+    </div>
   </div>
 
   <!-- 用户弹窗 -->
@@ -168,6 +212,12 @@
             <label style="display:flex;align-items:center;gap:6px;cursor:pointer">
               <input type="checkbox" id="permProcess"> <span>处理任务</span>
             </label>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">负责村社区</label>
+          <div id="userVillageCheckboxes" style="display:flex;flex-wrap:wrap;gap:8px;padding-top:4px;max-height:120px;overflow-y:auto;border:1px solid var(--border-light);border-radius:var(--radius);padding:8px">
+            <span class="text-muted" style="font-size:0.8rem">加载中...</span>
           </div>
         </div>
       </div>
@@ -259,6 +309,35 @@
     </div>
   </div>
 
+  <!-- 修改密码弹窗 -->
+  <div id="passwordModal" class="modal-overlay" style="display:none" onclick="if(event.target===this)closePasswordModal()">
+    <div class="modal" onclick="event.stopPropagation()">
+      <div class="modal-header">
+        <h3>修改密码</h3>
+        <button class="modal-close" onclick="closePasswordModal()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="passwordUserId">
+        <div class="form-group">
+          <label class="form-label">用户</label>
+          <input type="text" id="passwordUsername" class="form-control" disabled>
+        </div>
+        <div class="form-group">
+          <label class="form-label">新密码 <span class="text-danger">*</span></label>
+          <input type="password" id="newPassword" class="form-control" placeholder="请输入新密码（至少6位）" maxlength="100">
+        </div>
+        <div class="form-group">
+          <label class="form-label">确认密码 <span class="text-danger">*</span></label>
+          <input type="password" id="confirmPassword" class="form-control" placeholder="请再次输入新密码" maxlength="100">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closePasswordModal()">取消</button>
+        <button class="btn btn-primary" id="submitPasswordBtn" onclick="submitPassword()">确认修改</button>
+      </div>
+    </div>
+  </div>
+
   <div id="bottomNav"></div>
 
   <script src="js/app.js"></script>
@@ -285,6 +364,7 @@
       else if (tab === 'tags') loadTags();
       else if (tab === 'villages') loadVillages();
       else if (tab === 'insurances') loadInsurances();
+      else if (tab === 'data') {} // 导入导出无需额外加载
     }
 
     // ========== 用户管理 ==========
@@ -294,7 +374,7 @@
         const users = await App.users.list();
         cachedUsers = users;
         if (users.length === 0) {
-          tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">暂无用户</td></tr>';
+          tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted">暂无用户</td></tr>';
           return;
         }
         tbody.innerHTML = users.map(u => {
@@ -303,23 +383,26 @@
           if (u.can_edit) perms.push('修改');
           if (u.can_process) perms.push('处理');
           const permText = perms.length > 0 ? perms.join('、') : '<span class="text-muted">无</span>';
+          const villageText = u.village_names || '<span class="text-muted">无</span>';
           return `
           <tr>
             <td>${u.id}</td>
             <td>${escapeHtml(u.username)}</td>
             <td>${escapeHtml(u.display_name || '-')}</td>
             <td><span class="badge ${App.roleBadgeClass(u.role)}">${App.roleName(u.role)}</span></td>
+            <td style="font-size:12px">${villageText}</td>
             <td style="font-size:12px">${permText}</td>
             <td><span class="badge ${u.is_active !== 0 ? 'badge-success' : 'badge-danger'}">${u.is_active !== 0 ? '启用' : '禁用'}</span></td>
             <td>
               <button class="btn btn-sm btn-secondary" onclick="editUser(${u.id})">编辑</button>
+              <button class="btn btn-sm btn-outline" onclick="openPasswordModal(${u.id}, '${escapeHtml(u.username)}')">改密</button>
               <button class="btn btn-sm ${u.is_active !== 0 ? 'btn-warning' : 'btn-success'}" onclick="toggleUser(${u.id}, ${u.is_active})">${u.is_active !== 0 ? '禁用' : '启用'}</button>
               <button class="btn btn-sm btn-danger" onclick="deleteUser(${u.id})">删除</button>
             </td>
           </tr>`;
         }).join('');
       } catch (e) {
-        tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">加载失败</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted">加载失败</td></tr>';
       }
     }
 
@@ -335,9 +418,37 @@
       document.getElementById('userModalTitle').textContent = '添加用户';
       document.getElementById('passwordGroup').style.display = '';
       document.getElementById('userUsername').disabled = false;
+      // 加载村庄checkbox
+      loadVillageCheckboxes([]);
       document.getElementById('userModal').style.display = '';
       // 角色切换时自动设置权限
       updatePermsFromRole();
+    }
+
+    // 加载村庄checkbox列表
+    async function loadVillageCheckboxes(selectedIds) {
+      const container = document.getElementById('userVillageCheckboxes');
+      try {
+        const villages = await App.loadVillages();
+        if (villages.length === 0) {
+          container.innerHTML = '<span class="text-muted" style="font-size:0.8rem">暂无村社区，请先在村社区管理中添加</span>';
+          return;
+        }
+        container.innerHTML = villages.map(v => {
+          const checked = selectedIds.includes(String(v.id)) ? 'checked' : '';
+          return `<label style="display:flex;align-items:center;gap:4px;cursor:pointer;font-size:0.85rem;white-space:nowrap">
+            <input type="checkbox" class="user-village-cb" value="${v.id}" ${checked}> ${escapeHtml(v.name)}
+          </label>`;
+        }).join('');
+      } catch (e) {
+        container.innerHTML = '<span class="text-muted" style="font-size:0.8rem">加载失败</span>';
+      }
+    }
+
+    // 获取选中的村庄ID（逗号分隔字符串）
+    function getSelectedVillageIds() {
+      const checkboxes = document.querySelectorAll('.user-village-cb:checked');
+      return Array.from(checkboxes).map(cb => cb.value).join(',');
     }
 
     // 角色切换自动设置权限
@@ -375,6 +486,9 @@
         document.getElementById('permEdit').checked = !!user.can_edit;
         document.getElementById('permProcess').checked = !!user.can_process;
         document.getElementById('userModalTitle').textContent = '编辑用户';
+        // 回填村庄checkbox
+        const selectedIds = (user.village_ids || '').split(',').filter(id => id.trim() !== '');
+        await loadVillageCheckboxes(selectedIds);
         document.getElementById('userModal').style.display = '';
       } catch (e) {
         App.showToast('加载用户信息失败', 'error');
@@ -394,6 +508,7 @@
       const canPublish = document.getElementById('permPublish').checked;
       const canEdit = document.getElementById('permEdit').checked;
       const canProcess = document.getElementById('permProcess').checked;
+      const villageIds = getSelectedVillageIds();
 
       if (!username) { App.showToast('请输入用户名', 'warning'); return; }
       if (!editId && !password) { App.showToast('请输入密码', 'warning'); return; }
@@ -407,13 +522,14 @@
             username,
             display_name: displayName,
             role,
+            village_ids: villageIds,
             can_publish: canPublish,
             can_edit: canEdit,
             can_process: canProcess
           });
           App.showToast('用户更新成功', 'success');
         } else {
-          await App.users.create({ username, password, display_name: displayName, role, can_publish: canPublish, can_edit: canEdit, can_process: canProcess });
+          await App.users.create({ username, password, display_name: displayName, role, village_ids: villageIds, can_publish: canPublish, can_edit: canEdit, can_process: canProcess });
           App.showToast('用户创建成功', 'success');
         }
         closeUserModal();
@@ -452,6 +568,44 @@
         App.clearCache();
       } catch (e) {
         App.showToast(e.message || '删除失败', 'error');
+      }
+    }
+
+    // ========== 修改密码 ==========
+    function openPasswordModal(id, username) {
+      document.getElementById('passwordUserId').value = id;
+      document.getElementById('passwordUsername').value = username;
+      document.getElementById('newPassword').value = '';
+      document.getElementById('confirmPassword').value = '';
+      document.getElementById('passwordModal').style.display = '';
+    }
+
+    function closePasswordModal() {
+      document.getElementById('passwordModal').style.display = 'none';
+    }
+
+    async function submitPassword() {
+      const id = document.getElementById('passwordUserId').value;
+      const newPassword = document.getElementById('newPassword').value;
+      const confirmPassword = document.getElementById('confirmPassword').value;
+
+      if (!newPassword) { App.showToast('请输入新密码', 'warning'); return; }
+      if (newPassword.length < 6) { App.showToast('密码长度不能少于6位', 'warning'); return; }
+      if (newPassword !== confirmPassword) { App.showToast('两次输入的密码不一致', 'warning'); return; }
+
+      const btn = document.getElementById('submitPasswordBtn');
+      btn.disabled = true;
+      btn.textContent = '修改中...';
+
+      try {
+        await App.users.updatePassword(id, newPassword);
+        App.showToast('密码修改成功', 'success');
+        closePasswordModal();
+      } catch (e) {
+        App.showToast(e.message || '修改失败', 'error');
+      } finally {
+        btn.disabled = false;
+        btn.textContent = '确认修改';
       }
     }
 
@@ -571,22 +725,21 @@
 
     async function loadVillageLeaderOptions(selectedLeaderId) {
       const select = document.getElementById('villageLeader');
-      // 加载用户列表
-      if (cachedUsers.length === 0) {
-        try {
-          cachedUsers = await App.users.list();
-        } catch (e) {
-          console.error('加载用户列表失败:', e);
-        }
+      // 只加载查勘员列表
+      try {
+        const surveyors = await App.loadSurveyors();
+        select.innerHTML = '<option value="">请选择负责人</option>';
+        surveyors.forEach(u => {
+          const opt = document.createElement('option');
+          opt.value = u.id;
+          opt.textContent = u.display_name || u.username;
+          if (selectedLeaderId && String(u.id) === String(selectedLeaderId)) opt.selected = true;
+          select.appendChild(opt);
+        });
+      } catch (e) {
+        console.error('加载查勘员列表失败:', e);
+        select.innerHTML = '<option value="">加载失败</option>';
       }
-      select.innerHTML = '<option value="">请选择负责人</option>';
-      cachedUsers.filter(u => u.is_active !== 0).forEach(u => {
-        const opt = document.createElement('option');
-        opt.value = u.id;
-        opt.textContent = u.username + (u.display_name ? ` (${u.display_name})` : '');
-        if (selectedLeaderId && String(u.id) === String(selectedLeaderId)) opt.selected = true;
-        select.appendChild(opt);
-      });
     }
 
     function openVillageModal() {
@@ -741,6 +894,129 @@
       } catch (e) {
         App.showToast(e.message || '删除失败', 'error');
       }
+    }
+
+    // ========== 导入导出 ==========
+    async function exportTasks() {
+      const btn = document.getElementById('btnExportTasks');
+      btn.disabled = true;
+      btn.textContent = '导出中...';
+      try {
+        const token = localStorage.getItem('token');
+        const resp = await fetch('/api/export/tasks', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (!resp.ok) throw new Error('导出失败');
+        const blob = await resp.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `任务导出_${new Date().toISOString().slice(0,10)}.xlsx`;
+        a.click();
+        URL.revokeObjectURL(url);
+        App.showToast('任务导出成功', 'success');
+      } catch (e) {
+        App.showToast(e.message || '导出失败', 'error');
+      } finally {
+        btn.disabled = false;
+        btn.textContent = '导出所有任务 (xlsx)';
+      }
+    }
+
+    async function importTasks(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      const statusEl = document.getElementById('importTasksStatus');
+      statusEl.textContent = '导入中...';
+      statusEl.style.color = 'var(--text-muted)';
+      try {
+        const token = localStorage.getItem('token');
+        const formData = new FormData();
+        formData.append('file', file);
+        const resp = await fetch('/api/export/tasks/import', {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${token}` },
+          body: formData
+        });
+        const data = await resp.json();
+        if (data.code === 0) {
+          statusEl.textContent = data.message;
+          statusEl.style.color = 'var(--success)';
+          App.showToast(data.message, 'success');
+        } else {
+          statusEl.textContent = data.message;
+          statusEl.style.color = 'var(--danger)';
+          App.showToast(data.message, 'error');
+        }
+      } catch (e) {
+        statusEl.textContent = '导入失败';
+        statusEl.style.color = 'var(--danger)';
+        App.showToast('导入失败', 'error');
+      }
+      event.target.value = '';
+    }
+
+    async function exportConfig() {
+      const btn = document.getElementById('btnExportConfig');
+      btn.disabled = true;
+      btn.textContent = '导出中...';
+      try {
+        const token = localStorage.getItem('token');
+        const resp = await fetch('/api/export/config', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (!resp.ok) throw new Error('导出失败');
+        const blob = await resp.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `系统配置导出_${new Date().toISOString().slice(0,10)}.xlsx`;
+        a.click();
+        URL.revokeObjectURL(url);
+        App.showToast('系统配置导出成功', 'success');
+      } catch (e) {
+        App.showToast(e.message || '导出失败', 'error');
+      } finally {
+        btn.disabled = false;
+        btn.textContent = '导出系统配置 (xlsx)';
+      }
+    }
+
+    async function importConfig(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      const statusEl = document.getElementById('importConfigStatus');
+      const confirmed = await App.showConfirm('导入系统配置将更新已有数据并创建新数据，确认继续？');
+      if (!confirmed) { event.target.value = ''; return; }
+      statusEl.textContent = '导入中...';
+      statusEl.style.color = 'var(--text-muted)';
+      try {
+        const token = localStorage.getItem('token');
+        const formData = new FormData();
+        formData.append('file', file);
+        const resp = await fetch('/api/export/config/import', {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${token}` },
+          body: formData
+        });
+        const data = await resp.json();
+        if (data.code === 0) {
+          statusEl.textContent = data.message;
+          statusEl.style.color = 'var(--success)';
+          App.showToast(data.message, 'success');
+          App.clearCache();
+          loadUsers();
+        } else {
+          statusEl.textContent = data.message;
+          statusEl.style.color = 'var(--danger)';
+          App.showToast(data.message, 'error');
+        }
+      } catch (e) {
+        statusEl.textContent = '导入失败';
+        statusEl.style.color = 'var(--danger)';
+        App.showToast('导入失败', 'error');
+      }
+      event.target.value = '';
     }
 
     // 初始加载

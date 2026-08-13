@@ -246,7 +246,7 @@ router.put('/:id/survey', requireAuth, requirePermission('can_process'), (req, r
     // 标记已查勘后自动设置 process_status = 'pending'，未查勘时清空处理状态
     const processStatus = survey_status === 'surveyed' ? 'pending' : null;
 
-    taskQueries.updateSurveyStatus(survey_status, processStatus, survey_remark || '', req.params.id);
+    taskQueries.updateSurveyStatus(survey_status, processStatus, survey_remark || '', survey_status, req.params.id);
 
     logQueries.create(req.params.id, 'survey_status_change', oldStatus, survey_status, req.user.id);
 
@@ -275,15 +275,15 @@ router.put('/:id/process', requireAuth, requirePermission('can_process'), (req, 
     }
 
     const { process_status, process_remark } = req.body;
-    if (!['pending', 'resurvey', 'missing_docs', 'submitted'].includes(process_status)) {
+    if (!['pending', 'resurvey', 'missing_docs', 'submitted', 'rejected'].includes(process_status)) {
       return res.json({ code: 400, data: null, message: '无效的处理状态' });
     }
 
     const oldStatus = task.process_status;
-    taskQueries.updateProcessStatus(process_status, process_remark || '', process_status, req.params.id);
+    taskQueries.updateProcessStatus(process_status, process_remark || '', process_status, process_status, req.params.id);
 
-    // 标记已提交后自动归档
-    if (process_status === 'submitted') {
+    // 标记已提交或拒赔后自动归档
+    if (process_status === 'submitted' || process_status === 'rejected') {
       taskQueries.archive(req.params.id);
     }
 
@@ -292,9 +292,36 @@ router.put('/:id/process', requireAuth, requirePermission('can_process'), (req, 
     const io = getIo(req);
     broadcastTaskChange(io, 'task_process_updated', { id: parseInt(req.params.id), process_status });
 
-    res.json({ code: 0, data: null, message: process_status === 'submitted' ? '任务已提交并归档' : '处理进度更新成功' });
+    const statusMsg = process_status === 'submitted' ? '任务已提交并归档' : process_status === 'rejected' ? '任务已拒赔并归档' : '处理进度更新成功';
+    res.json({ code: 0, data: null, message: statusMsg });
   } catch (err) {
     console.error('更新处理进度错误:', err);
+    res.json({ code: 500, data: null, message: '服务器错误' });
+  }
+});
+
+// DELETE /api/tasks/:id - 删除任务
+router.delete('/:id', requireAuth, (req, res) => {
+  try {
+    const { taskQueries, logQueries } = getQueries();
+    const task = taskQueries.getById(req.params.id);
+    if (!task) {
+      return res.json({ code: 404, data: null, message: '任务不存在' });
+    }
+
+    // 权限检查：任何登录用户都可以删除任务
+
+    // 记录日志
+    logQueries.create(req.params.id, 'delete', null, JSON.stringify({ title: task.title }), req.user.id);
+
+    taskQueries.delete(req.params.id);
+
+    const io = getIo(req);
+    broadcastTaskChange(io, 'task_deleted', { id: parseInt(req.params.id) });
+
+    res.json({ code: 0, data: null, message: '任务删除成功' });
+  } catch (err) {
+    console.error('删除任务错误:', err);
     res.json({ code: 500, data: null, message: '服务器错误' });
   }
 });

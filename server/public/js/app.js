@@ -105,7 +105,8 @@ const App = {
     update(id, data) { return App.put(`/api/users/${id}`, data); },
     delete(id) { return App.delete(`/api/users/${id}`); },
     hardDelete(id) { return App.delete(`/api/users/${id}?hard=true`); },
-    updateRole(id, role) { return App.put(`/api/users/${id}/role`, { role }); }
+    updateRole(id, role) { return App.put(`/api/users/${id}/role`, { role }); },
+    updatePassword(id, new_password) { return App.put(`/api/users/${id}/password`, { new_password }); }
   },
 
   // ========== 任务API ==========
@@ -125,6 +126,9 @@ const App = {
     },
     reassign(id, assigned_to) {
       return App.put(`/api/tasks/${id}/reassign`, { assigned_to });
+    },
+    delete(id) {
+      return App.delete(`/api/tasks/${id}`);
     },
     completed(params = {}) {
       const query = new URLSearchParams(params).toString();
@@ -203,7 +207,8 @@ const App = {
       'pending': { text: '待处理', cls: 'process-pending' },
       'resurvey': { text: '需复勘', cls: 'process-resurvey' },
       'missing_docs': { text: '缺少证件', cls: 'process-missing_docs' },
-      'submitted': { text: '已提交', cls: 'process-submitted' }
+      'submitted': { text: '已提交', cls: 'process-submitted' },
+      'rejected': { text: '拒赔', cls: 'process-rejected' }
     };
     const info = map[status] || { text: status || '-', cls: 'badge-gray' };
     return `<span class="badge ${info.cls}">${info.text}</span>`;
@@ -387,6 +392,11 @@ const App = {
           <span>${user.display_name || user.username}</span>
           <span class="${this.roleBadgeClass(user.role)}">${this.roleName(user.role)}</span>
         </div>
+        <button class="btn btn-ghost btn-sm" onclick="location.href='settings.html'" title="设置">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z"/>
+          </svg>
+        </button>
         <button class="btn btn-ghost btn-sm" onclick="App.logout()" title="退出登录">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>

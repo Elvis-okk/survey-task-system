@@ -44,7 +44,7 @@ router.post('/login', (req, res) => {
           username: user.username,
           display_name: user.display_name,
           role: user.role,
-          village_id: user.village_id,
+          village_ids: user.village_ids || '',
           can_publish: user.can_publish,
           can_edit: user.can_edit,
           can_process: user.can_process
@@ -71,6 +71,14 @@ router.get('/me', requireAuth, (req, res) => {
     if (!user) {
       return res.json({ code: 404, data: null, message: '用户不存在' });
     }
+    const { villageQueries } = getQueries();
+    const villages = villageQueries.getAll();
+    const resolveVillageNames = (villageIds) => {
+      if (!villageIds || villageIds.trim() === '') return '';
+      const ids = villageIds.split(',').map(id => parseInt(id.trim())).filter(id => !isNaN(id));
+      return ids.map(id => { const v = villages.find(v => v.id === id); return v ? v.name : null; }).filter(n => n !== null).join(',');
+    };
+
     res.json({
       code: 0,
       data: {
@@ -78,8 +86,8 @@ router.get('/me', requireAuth, (req, res) => {
         username: user.username,
         display_name: user.display_name,
         role: user.role,
-        village_id: user.village_id,
-        village_name: user.village_name,
+        village_ids: user.village_ids || '',
+        village_names: resolveVillageNames(user.village_ids),
         is_active: user.is_active,
         can_publish: user.can_publish,
         can_edit: user.can_edit,

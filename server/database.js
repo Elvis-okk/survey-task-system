@@ -148,13 +148,15 @@ async function initDatabase() {
       purchase_info TEXT DEFAULT '',
       contact_person TEXT DEFAULT '',
       survey_status TEXT DEFAULT 'not_surveyed' CHECK(survey_status IN ('not_surveyed', 'surveyed')),
-      process_status TEXT CHECK(process_status IN ('pending', 'resurvey', 'missing_docs', 'submitted')),
-      has_harmony INTEGER DEFAULT 0,
+      process_status TEXT CHECK(process_status IN ('pending', 'resurvey', 'missing_docs', 'submitted', 'rejected')),
+      has_harmony INTEGER DEFAULT 1,
       created_by INTEGER NOT NULL,
       assigned_to INTEGER,
       created_at TEXT DEFAULT (datetime('now')),
       updated_at TEXT DEFAULT (datetime('now')),
       completed_at TEXT,
+      surveyed_at TEXT,
+      submitted_at TEXT,
       is_archived INTEGER DEFAULT 0,
       remark TEXT DEFAULT '',
       survey_remark TEXT DEFAULT '',
@@ -210,14 +212,76 @@ async function initDatabase() {
     { table: 'users', column: 'can_edit', type: 'INTEGER DEFAULT 0' },
     { table: 'users', column: 'can_process', type: 'INTEGER DEFAULT 0' },
     { table: 'tasks', column: 'contact_person', type: "TEXT DEFAULT ''" },
-    { table: 'tasks', column: 'has_harmony', type: 'INTEGER DEFAULT 0' }
+    { table: 'tasks', column: 'has_harmony', type: 'INTEGER DEFAULT 1' },
+    { table: 'users', column: 'village_ids', type: "TEXT DEFAULT ''" },
+    { table: 'tasks', column: 'surveyed_at', type: 'TEXT' },
+    { table: 'tasks', column: 'submitted_at', type: 'TEXT' }
   ];
+
+  // 迁移：将已有village_id数据转为village_ids
+  try {
+    const migrateRows = db.prepare('SELECT id, village_id FROM users WHERE village_id IS NOT NULL AND village_id != 0 AND (village_ids IS NULL OR village_ids = \'\')').all();
+    for (const row of migrateRows) {
+      db.prepare('UPDATE users SET village_ids = ? WHERE id = ?').run(String(row.village_id), row.id);
+    }
+    if (migrateRows.length > 0) {
+      console.log(`迁移了 ${migrateRows.length} 个用户的village_id到village_ids`);
+    }
+  } catch (e) {
+    // 忽略迁移错误
+  }
   for (const col of columnsToAdd) {
     try {
       database.exec(`ALTER TABLE ${col.table} ADD COLUMN ${col.column} ${col.type}`);
     } catch (e) {
       // 列已存在，忽略错误
     }
+  }
+
+  // 迁移：更新tasks表的process_status CHECK约束以支持'rejected'
+  try {
+    // 检查当前CHECK约束是否包含rejected
+    const tableInfo = db.prepare("SELECT sql FROM sqlite_master WHERE type='table' AND name='tasks'").get();
+    if (tableInfo && tableInfo.sql && !tableInfo.sql.includes('rejected')) {
+      // 重建tasks表以更新CHECK约束
+      database.exec(`
+        CREATE TABLE tasks_new (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          title TEXT NOT NULL DEFAULT '',
+          publish_time TEXT NOT NULL,
+          tag TEXT DEFAULT '',
+          village_id INTEGER,
+          address TEXT DEFAULT '',
+          contact_phone TEXT DEFAULT '',
+          purchase_info TEXT DEFAULT '',
+          contact_person TEXT DEFAULT '',
+          survey_status TEXT DEFAULT 'not_surveyed' CHECK(survey_status IN ('not_surveyed', 'surveyed')),
+          process_status TEXT CHECK(process_status IN ('pending', 'resurvey', 'missing_docs', 'submitted', 'rejected')),
+          has_harmony INTEGER DEFAULT 1,
+          created_by INTEGER NOT NULL,
+          assigned_to INTEGER,
+          created_at TEXT DEFAULT (datetime('now')),
+          updated_at TEXT DEFAULT (datetime('now')),
+          completed_at TEXT,
+          surveyed_at TEXT,
+          submitted_at TEXT,
+          is_archived INTEGER DEFAULT 0,
+          remark TEXT DEFAULT '',
+          survey_remark TEXT DEFAULT '',
+          process_remark TEXT DEFAULT '',
+          insurance_id INTEGER,
+          FOREIGN KEY (village_id) REFERENCES villages(id),
+          FOREIGN KEY (created_by) REFERENCES users(id),
+          FOREIGN KEY (assigned_to) REFERENCES users(id)
+        );
+        INSERT INTO tasks_new SELECT * FROM tasks;
+        DROP TABLE tasks;
+        ALTER TABLE tasks_new RENAME TO tasks;
+      `);
+      console.log('迁移：tasks表process_status约束已更新，支持rejected状态');
+    }
+  } catch (e) {
+    console.error('迁移tasks表约束失败:', e.message);
   }
 
   // 创建默认管理员账号
@@ -285,37 +349,33 @@ function createQueries() {
   return {
     user: {
       getAll: () => db.prepare(`
-        SELECT u.id, u.username, u.display_name, u.role, u.village_id, u.created_at, u.updated_at, u.is_active,
-               u.can_publish, u.can_edit, u.can_process,
-               v.name as village_name
+        SELECT u.id, u.username, u.display_name, u.role, u.village_ids, u.created_at, u.updated_at, u.is_active,
+               u.can_publish, u.can_edit, u.can_process
         FROM users u
-        LEFT JOIN villages v ON u.village_id = v.id
         ORDER BY u.created_at DESC
       `).all(),
 
       getById: (id) => db.prepare(`
-        SELECT u.id, u.username, u.display_name, u.role, u.village_id, u.created_at, u.updated_at, u.is_active,
-               u.can_publish, u.can_edit, u.can_process,
-               v.name as village_name
+        SELECT u.id, u.username, u.display_name, u.role, u.village_ids, u.created_at, u.updated_at, u.is_active,
+               u.can_publish, u.can_edit, u.can_process
         FROM users u
-        LEFT JOIN villages v ON u.village_id = v.id
         WHERE u.id = ?
       `).get(id),
 
       getByUsername: (username) => db.prepare('SELECT * FROM users WHERE username = ?').get(username),
 
       create: (...params) => db.prepare(`
-        INSERT INTO users (username, password, display_name, role, village_id, can_publish, can_edit, can_process)
+        INSERT INTO users (username, password, display_name, role, village_ids, can_publish, can_edit, can_process)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?)
       `).run(...params),
 
       update: (...params) => db.prepare(`
-        UPDATE users SET display_name = ?, role = ?, village_id = ?, updated_at = datetime('now')
+        UPDATE users SET display_name = ?, role = ?, village_ids = ?, updated_at = datetime('now')
         WHERE id = ?
       `).run(...params),
 
       updateWithUsername: (...params) => db.prepare(`
-        UPDATE users SET username = ?, display_name = ?, role = ?, village_id = ?, can_publish = ?, can_edit = ?, can_process = ?, updated_at = datetime('now')
+        UPDATE users SET username = ?, display_name = ?, role = ?, village_ids = ?, can_publish = ?, can_edit = ?, can_process = ?, updated_at = datetime('now')
         WHERE id = ?
       `).run(...params),
 
@@ -380,7 +440,7 @@ function createQueries() {
         if (filters.task_category === 'pending_survey') {
           conditions.push("t.survey_status = 'not_surveyed'");
         } else if (filters.task_category === 'processing') {
-          conditions.push("t.survey_status = 'surveyed' AND (t.process_status IS NULL OR t.process_status != 'submitted')");
+          conditions.push("t.survey_status = 'surveyed' AND (t.process_status IS NULL OR (t.process_status != 'submitted' AND t.process_status != 'rejected'))");
         }
         // completed分类已通过is_archived主条件处理
 
@@ -412,7 +472,7 @@ function createQueries() {
         if (filters.task_category === 'pending_survey') {
           conditions.push("survey_status = 'not_surveyed'");
         } else if (filters.task_category === 'processing') {
-          conditions.push("survey_status = 'surveyed' AND (process_status IS NULL OR process_status != 'submitted')");
+          conditions.push("survey_status = 'surveyed' AND (process_status IS NULL OR (process_status != 'submitted' AND process_status != 'rejected'))");
         }
         // completed分类已通过is_archived主条件处理
 
@@ -446,11 +506,15 @@ function createQueries() {
       `).run(...params),
 
       updateSurveyStatus: (...params) => db.prepare(`
-        UPDATE tasks SET survey_status = ?, process_status = ?, survey_remark = ?, updated_at = datetime('now') WHERE id = ?
+        UPDATE tasks SET survey_status = ?, process_status = ?, survey_remark = ?, updated_at = datetime('now'),
+          surveyed_at = CASE WHEN ? = 'surveyed' THEN datetime('now') ELSE surveyed_at END
+        WHERE id = ?
       `).run(...params),
 
       updateProcessStatus: (...params) => db.prepare(`
-        UPDATE tasks SET process_status = ?, process_remark = ?, updated_at = datetime('now'), completed_at = CASE WHEN ? = 'submitted' THEN datetime('now') ELSE completed_at END
+        UPDATE tasks SET process_status = ?, process_remark = ?, updated_at = datetime('now'),
+          completed_at = CASE WHEN ? IN ('submitted', 'rejected') THEN datetime('now') ELSE completed_at END,
+          submitted_at = CASE WHEN ? = 'submitted' THEN datetime('now') ELSE submitted_at END
         WHERE id = ?
       `).run(...params),
 
@@ -461,6 +525,8 @@ function createQueries() {
       archive: (id) => db.prepare(`
         UPDATE tasks SET is_archived = 1, completed_at = datetime('now'), updated_at = datetime('now') WHERE id = ?
       `).run(id),
+
+      delete: (id) => db.prepare('DELETE FROM tasks WHERE id = ?').run(id),
 
       getCompleted: (filters) => {
         let sql = `

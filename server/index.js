@@ -11,6 +11,7 @@ const authRoutes = require('./routes/auth');
 const usersRoutes = require('./routes/users');
 const tasksRoutes = require('./routes/tasks');
 const settingsRoutes = require('./routes/settings');
+const exportRoutes = require('./routes/export');
 
 const app = express();
 const server = http.createServer(app);
@@ -39,6 +40,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/users', usersRoutes);
 app.use('/api/tasks', tasksRoutes);
 app.use('/api/settings', settingsRoutes);
+app.use('/api/export', exportRoutes);
 
 // Socket.io 认证
 io.use((socket, next) => {

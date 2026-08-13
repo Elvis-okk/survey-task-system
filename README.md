@@ -39,7 +39,7 @@ docker-compose up -d
 或直接使用 Docker 命令：
 
 ```bash
-docker run -d --name survey-task-system -p 3000:3000 -v ./data:/app/data ghcr.io/elvis-okk/survey-task-system:1.0
+docker run -d --name survey-task-system -p 3000:3000 -v ./data:/app/data ghcr.io/elvis-okk/survey-task-system:2.0
 ```
 
 ### 从源码构建
